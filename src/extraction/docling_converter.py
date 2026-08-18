@@ -23,7 +23,7 @@ def build_converter() -> DocumentConverter:
     pdf_options.do_ocr = False
     pdf_options.do_picture_description = False
     pdf_options.do_picture_classification = False
- 
+
     return DocumentConverter(
         format_options={
             InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options),
@@ -39,7 +39,3 @@ def convert_file(path: Path, converter: DocumentConverter | None = None) -> Docl
         converter = build_converter()
     result = converter.convert(path)
     return result.document
-
-if __name__ == "__main__":
-    file = convert_file(Path("data/corpus/Documentation_Electrodomus/Bulletins_techniques/BT-2026-007.docx"))
-    print(file.export_to_markdown())
