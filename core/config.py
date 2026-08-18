@@ -20,6 +20,9 @@ class Settings:
     et des fonctions utilitaires.
     """
     source_dir: Path
+    max_tokens: int
+    min_tokens: int
+    embed_model: str
 
     def validate_folder(self) -> None:
         """Validation des variables d'environnement au lancement du projet"""
@@ -38,9 +41,15 @@ def load_settings() -> Settings:
     Fonction d'initialisation des variables d'environnement.
     """
     source_dir = os.getenv("RAG_SOURCE_DIR", "data/corpus")
+    max_tokens = os.getenv("MAX_TOKENS", "512")
+    min_tokens = os.getenv("MIN_TOKENS", "200")
+    embed_model = os.getenv("EMBED_MODEL", "BAAI/bge-m3")
 
     settings = Settings(
         source_dir=Path(source_dir),
+        max_tokens=max_tokens,
+        min_tokens=min_tokens,
+        embed_model=embed_model,
     )
     settings.validate_folder()
     return settings
