@@ -4,7 +4,21 @@ modèles présents dans le chunk/le document.
 """
 
 import re
+from datetime import datetime
 
+
+MONTHS_FR = {
+    "janvier": 1, "février": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6,
+    "juillet": 7, "août": 8, "septembre": 9, "octobre": 10, "novembre": 11, "décembre": 12,
+}
+MONTHS_PATTERN = "|".join(MONTHS_FR.keys())
+
+SPACE = r"[\s\xa0]+"
+
+DATE_PATTERNS = [
+    (re.compile(r"\b(\d{1,2})[/\-](\d{4})\b"), "numeric"),
+    (re.compile(rf"\b({MONTHS_PATTERN}){SPACE}(\d{{4}})\b", re.IGNORECASE), "text"),
+]
 
 MODEL_PATTERN = re.compile(r"\b((?:FR|WX|LV)-\d{3,4})\b")
 
@@ -51,3 +65,30 @@ def resolve_chunk_models(chunk_text: str, doc_level_models: list[str] | None) ->
         return chunk_result
 
     return doc_level_models
+
+
+def extract_document_date(text: str) -> str | None:
+    """
+    Cherche une date mois/année dans le texte (format MM/YYYY ou "mois YYYY").
+    Retourne YYYY-MM, ou None si rien trouvé.
+    """
+    for pattern, kind in DATE_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+
+        try:
+            if kind == "numeric":
+                month, year = match.groups()
+                datetime(int(year), int(month), 1)  # validation du mois (1-12)
+                return f"{year}-{int(month):02d}"
+
+            elif kind == "text":
+                month_name, year = match.groups()
+                month = MONTHS_FR[month_name.lower()]
+                return f"{year}-{month:02d}"
+
+        except ValueError:
+            continue
+
+    return None

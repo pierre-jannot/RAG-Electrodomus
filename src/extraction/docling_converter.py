@@ -19,6 +19,11 @@ from src.extraction.xlsx_extractor import read_sheet_fixed_template
 from src.extraction.html_extractor import promote_summary_to_heading
 
 
+FIRST_LINE_NOISE_VALUES = {
+    "ELECTRODOMUS",
+    "ELECTRODOMUS — Documentation interne",
+}
+
 NOISE_TEXTS = ["Ce bulletin prévaut sur la documentation produit antérieure (manuels et référentiel des codes erreur) pour les points qu'il traite."]
 
 
@@ -99,25 +104,29 @@ def normalize_first_lines(document: DoclingDocument, target_level: int = 0) -> D
     """
     - la 1re ligne de contenu (body) est supprimée
     - la 2e ligne devient le titre principal du document
-
-    Note : SectionHeaderItem.level doit être >= 1 (0 est rejeté par
-    validation Pydantic à la construction).
     """
     body_items = [item for item in document.texts if item.content_layer == ContentLayer.BODY]
 
-    if len(body_items) < 2:
+    if not body_items:
         return document
 
-    first_item, second_item = body_items[0], body_items[1]
+    first_item = body_items[0]
 
-    if isinstance(second_item, SectionHeaderItem):
-        second_item.level = target_level
+    if first_item.text.strip() in FIRST_LINE_NOISE_VALUES:
+        if len(body_items) < 2:
+            document.delete_items(node_items=[first_item])
+            return document
+        title_item = body_items[1]
+        document.delete_items(node_items=[first_item])
     else:
-        new_heading = promote_to_heading(second_item, target_level=1)
-        new_heading.level = target_level
-        document.replace_item(new_item=new_heading, old_item=second_item)
+        title_item = first_item
 
-    document.delete_items(node_items=[first_item])
+    if isinstance(title_item, SectionHeaderItem):
+        title_item.level = target_level
+    else:
+        new_heading = promote_to_heading(title_item, target_level=1)
+        new_heading.level = target_level
+        document.replace_item(new_item=new_heading, old_item=title_item)
 
     return document
 

@@ -9,7 +9,7 @@ from docling_core.types.doc import DoclingDocument
 from transformers import AutoTokenizer
 
 from core.config import load_settings
-from src.extraction.device_extractor import resolve_models, resolve_chunk_models
+from src.extraction.regex_extraction import resolve_models, resolve_chunk_models, extract_document_date
 
 settings = load_settings()
 
@@ -43,12 +43,14 @@ def compute_chunks(chunker: HybridChunker, document: DoclingDocument):
     """
     document_text = document.export_to_markdown()
     document_level_models = resolve_models(document_text)
+    document_date = extract_document_date(document_text)
     raw_chunks = list(chunker.chunk(dl_doc=document))
 
     for i, chunk in enumerate(raw_chunks):
         enriched = chunker.contextualize(chunk=chunk)
         chunk_models = resolve_chunk_models(chunk.text, document_level_models)
         print(f"--- Chunk {i} ---")
-        print(f"- Models : {chunk_models} -")
+        print(f"- Modèle : {chunk_models} -")
+        print(f"- Date : {document_date} -")
         print(enriched)
         print()
