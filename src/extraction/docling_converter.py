@@ -11,12 +11,15 @@ from pathlib import Path
 from docling.datamodel.base_models import InputFormat, DocumentStream
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling_core.types.doc import DoclingDocument, DocItemLabel
+from docling_core.types.doc import DoclingDocument, DocItemLabel, SectionHeaderItem, ContentLayer
 
 import pandas as pd
 
 from src.extraction.xlsx_extractor import read_sheet_fixed_template
 from src.extraction.html_extractor import promote_summary_to_heading
+
+
+NOISE_TEXTS = ["Ce bulletin prévaut sur la documentation produit antérieure (manuels et référentiel des codes erreur) pour les points qu'il traite."]
 
 
 def build_converter() -> DocumentConverter:
@@ -50,7 +53,7 @@ def convert_file(path: Path, converter: DocumentConverter | None = None) -> Docl
     match suffix:
 
         case ".xlsx":
-            return xlsx_to_docling_document(str(path))
+            document = xlsx_to_docling_document(str(path))
 
         case ".html" | ".htm":
             raw_html = path.read_text(encoding="utf-8")
@@ -59,15 +62,65 @@ def convert_file(path: Path, converter: DocumentConverter | None = None) -> Docl
                 name=path.name,
                 stream=BytesIO(transformed_html.encode("utf-8")),
             )
-            result = converter.convert(stream)
-            return result.document
+            document = converter.convert(stream).document
 
         case ".docx" | ".pdf":
             result = converter.convert(path)
-            return result.document
+            document = normalize_first_lines(result.document)
 
         case _:
             raise ValueError(f"Extension non supportée : {suffix} ({path.name})")
+
+    document = strip_formatting(document=document)
+    document = strip_noise_lines(document=document, noise_texts=NOISE_TEXTS)
+    return document
+
+
+def promote_to_heading(item, target_level: int = 1) -> SectionHeaderItem:
+    """Construit un SectionHeaderItem qui réutilise le self_ref exact de
+    l'item remplacé — aucun nouveau ref créé, donc pas de risque de collision
+    avec add_heading() lors d'un delete_items() ultérieur."""
+    return SectionHeaderItem(
+        self_ref=item.self_ref,
+        parent=item.parent,
+        children=item.children,
+        content_layer=item.content_layer,
+        label=DocItemLabel.SECTION_HEADER,
+        prov=item.prov,
+        orig=item.orig,
+        text=item.text,
+        formatting=getattr(item, "formatting", None),
+        hyperlink=getattr(item, "hyperlink", None),
+        level=target_level,
+    )
+
+
+def normalize_first_lines(document: DoclingDocument, target_level: int = 0) -> DoclingDocument:
+    """
+    - la 1re ligne de contenu (body) est supprimée
+    - la 2e ligne devient le titre principal du document
+
+    Note : SectionHeaderItem.level doit être >= 1 (0 est rejeté par
+    validation Pydantic à la construction).
+    """
+    body_items = [item for item in document.texts if item.content_layer == ContentLayer.BODY]
+
+    if len(body_items) < 2:
+        return document
+
+    first_item, second_item = body_items[0], body_items[1]
+
+    if isinstance(second_item, SectionHeaderItem):
+        second_item.level = target_level
+    else:
+        new_heading = promote_to_heading(second_item, target_level=1)
+        new_heading.level = target_level
+        document.replace_item(new_item=new_heading, old_item=second_item)
+
+    document.delete_items(node_items=[first_item])
+
+    return document
+
 
 def xlsx_to_docling_document(xlsx_path: str) -> DoclingDocument:
     """
@@ -95,7 +148,36 @@ def xlsx_to_docling_document(xlsx_path: str) -> DoclingDocument:
 
             # Niveau 3 : idem pour chaque colonne restante
             for col in content_cols:
-                document.add_heading(text=f"{col}", level=3)
-                document.add_text(label=DocItemLabel.TEXT, text=str(row[col]))
+                document.add_text(label=DocItemLabel.TEXT, text=f"{col} : " + str(row[col]))
+
+    return document
+
+
+def strip_formatting(document: DoclingDocument) -> DoclingDocument:
+    """
+    Retire toute mise en forme (gras, italique...) portée par les items
+    texte du document, pour un export markdown sans ** ou autres marqueurs.
+    """
+    for item in document.texts:
+        if getattr(item, "formatting", None) is not None:
+            item.formatting = None
+    return document
+
+
+def strip_noise_lines(document: DoclingDocument, noise_texts: list[str]) -> DoclingDocument:
+    """
+    Supprime tous les items dont le texte correspond exactement à l'une
+    des chaînes fournies dans noise_texts — utile pour des mentions
+    récurrentes sans valeur informative (bandeaux, mentions légales
+    répétées, numéros de version en pied de page, etc.).
+    """
+    noise_set = set(noise_texts)
+    items_to_delete = [
+        item for item in document.texts
+        if item.text.strip() in noise_set
+    ]
+
+    if items_to_delete:
+        document.delete_items(node_items=items_to_delete)
 
     return document
