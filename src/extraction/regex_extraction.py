@@ -100,7 +100,7 @@ def resolve_chunk_errors(chunk_text: str, document_level_errors: list[str] | Non
     return document_level_errors
 
 
-def extract_document_date(text: str) -> str | None:
+def resolve_date(text: str) -> str | None:
     """
     Cherche une date mois/année dans le texte (format MM/YYYY ou "mois YYYY").
     Retourne YYYY-MM, ou None si rien trouvé.
@@ -125,3 +125,26 @@ def extract_document_date(text: str) -> str | None:
             continue
 
     return None
+
+def resolve_metadata(text: str) -> dict:
+    date = resolve_date(text)
+    models = resolve_models(text)
+    errors = resolve_errors(text)
+
+    return {
+        "date": date,
+        "models": models,
+        "errors": errors,
+        }
+
+
+def resolve_chunk_metadata(document_metadata: dict, text: str) -> dict:
+    date = document_metadata["date"]
+    models = resolve_chunk_models(text, document_metadata["models"])
+    errors = resolve_chunk_errors(text, document_metadata["errors"])
+
+    return {
+        "date": date,
+        "models": models,
+        "errors": errors,
+        }
