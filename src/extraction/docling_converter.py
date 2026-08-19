@@ -5,9 +5,10 @@ Wrapper autour de Docling DocumentConverter pour les formats du projet :
 PDF (texte), DOCX, HTML, XLSX.
 """
 
+from io import BytesIO
 from pathlib import Path
 
-from docling.datamodel.base_models import InputFormat
+from docling.datamodel.base_models import InputFormat, DocumentStream
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import DoclingDocument, DocItemLabel
@@ -15,6 +16,7 @@ from docling_core.types.doc import DoclingDocument, DocItemLabel
 import pandas as pd
 
 from src.extraction.xlsx_extractor import read_sheet_fixed_template
+from src.extraction.html_extractor import promote_summary_to_heading
 
 
 def build_converter() -> DocumentConverter:
@@ -37,12 +39,35 @@ def build_converter() -> DocumentConverter:
 
 def convert_file(path: Path, converter: DocumentConverter | None = None) -> DoclingDocument:
     """
-    Convertit un fichier en DoclingDocument.
+    Convertit un fichier en DoclingDocument, avec un traitement dédié par
+    extension quand le pipeline générique de Docling ne suffit pas.
     """
     if converter is None:
         converter = build_converter()
-    result = converter.convert(path)
-    return result.document
+
+    suffix = path.suffix.lower()
+
+    match suffix:
+
+        case ".xlsx":
+            return xlsx_to_docling_document(str(path))
+
+        case ".html" | ".htm":
+            raw_html = path.read_text(encoding="utf-8")
+            transformed_html = promote_summary_to_heading(raw_html)
+            stream = DocumentStream(
+                name=path.name,
+                stream=BytesIO(transformed_html.encode("utf-8")),
+            )
+            result = converter.convert(stream)
+            return result.document
+
+        case ".docx" | ".pdf":
+            result = converter.convert(path)
+            return result.document
+
+        case _:
+            raise ValueError(f"Extension non supportée : {suffix} ({path.name})")
 
 def xlsx_to_docling_document(xlsx_path: str) -> DoclingDocument:
     """
