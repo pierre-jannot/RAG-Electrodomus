@@ -1,6 +1,8 @@
 """
-Script de fonctions REGEX pour récupérer le ou les
-modèles présents dans le chunk/le document.
+Script de fonctions REGEX pour récupérer :
+- le ou les modèles présents dans le chunk/le document
+- le ou les codes d'erreur présents dans le chunk/le document
+- la date du document
 """
 
 import re
@@ -23,6 +25,8 @@ DATE_PATTERNS = [
 MODEL_PATTERN = re.compile(r"\b((?:FR|WX|LV)-\d{3,4})\b")
 
 DEVICE_TYPE_PATTERN = re.compile(r"\b(FR|WX|LV)\b(?!-\d)")
+
+ERROR_CODE_PATTERN = re.compile(r"\bE\d{2}\b")
 
 
 def extract_specific_models(text: str) -> list[str]:
@@ -53,7 +57,7 @@ def resolve_models(text: str) -> list[str] | None:
     return None
 
 
-def resolve_chunk_models(chunk_text: str, doc_level_models: list[str] | None) -> list[str] | None:
+def resolve_chunk_models(chunk_text: str, document_level_models: list[str] | None) -> list[str] | None:
     """
     Applique la logique complète à l'échelle d'un chunk :
     - règles 1 & 2 : ce que le chunk contient lui-même (précis ou type seul)
@@ -64,7 +68,36 @@ def resolve_chunk_models(chunk_text: str, doc_level_models: list[str] | None) ->
     if chunk_result is not None:
         return chunk_result
 
-    return doc_level_models
+    return document_level_models
+
+
+def resolve_errors(text: str) -> list[str]:
+    """
+    Extrait tous les codes d'erreur au format EXX (E + 2 chiffres),
+    sans doublons, dans l'ordre d'apparition dans le texte.
+    """
+    seen = []
+    for match in ERROR_CODE_PATTERN.findall(text):
+        if match not in seen:
+            seen.append(match)
+
+    if seen:
+        return seen
+    
+    return None
+
+def resolve_chunk_errors(chunk_text: str, document_level_errors: list[str] | None) -> list[str] | None:
+    """
+    Applique la logique complète à l'échelle d'un chunk :
+    - règles 1 & 2 : ce que le chunk contient lui-même (précis ou type seul)
+    - règle 3 : repli sur les erreurs du document si le chunk n'en contient aucun
+    - règle 4 : None si ni le chunk ni le document n'en contiennent
+    """
+    chunk_result = resolve_errors(chunk_text)
+    if chunk_result is not None:
+        return chunk_result
+
+    return document_level_errors
 
 
 def extract_document_date(text: str) -> str | None:
