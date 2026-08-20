@@ -24,7 +24,8 @@ FIRST_LINE_NOISE_VALUES = {
     "ELECTRODOMUS — Documentation interne",
 }
 
-NOISE_TEXTS = ["Ce bulletin prévaut sur la documentation produit antérieure (manuels et référentiel des codes erreur) pour les points qu'il traite."]
+NOISE_TEXTS = ["Ce bulletin prévaut sur la documentation produit antérieure "
+"(manuels et référentiel des codes erreur) pour les points qu'il traite."]
 
 
 def build_converter() -> DocumentConverter:

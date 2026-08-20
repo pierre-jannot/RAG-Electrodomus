@@ -38,6 +38,23 @@ PARENTHESES_PATTERN = re.compile(r"\([^)]*\)")
 ERROR_CODE_PATTERN = re.compile(r"\bE\d{2}\b")
 
 
+def clean_metadata(metadata: dict) -> dict:
+    """
+    Nettoie un dict de métadonnées pour Chroma :
+    - supprime les clés dont la valeur est None
+    - remplace les listes vides par une valeur scalaire vide (Chroma
+      interdit les listes vides, mais accepte une chaîne vide)
+    """
+    cleaned = {}
+    for key, value in metadata.items():
+        if value is None:
+            continue
+        if isinstance(value, list) and len(value) == 0:
+            continue
+        cleaned[key] = value
+    return cleaned
+
+
 def extract_specific_models(text: str) -> list[str]:
     """Modèles précis mentionnés, ex: ['LV-451', 'LV-452']."""
     return sorted(set(MODEL_PATTERN.findall(text)))
@@ -77,7 +94,11 @@ def resolve_models(text: str, path: list[str] = []) -> list[str] | None:
     return None
 
 
-def resolve_chunk_models(chunk: DocChunk, text: str, document_level_models: list[str] | None, path: list[str]) -> list[str] | None:
+def resolve_chunk_models(
+        chunk: DocChunk,
+        text: str,
+        document_level_models: list[str] | None, path: list[str]
+        ) -> list[str] | None:
     """
     Applique la logique complète à l'échelle d'un chunk :
     - règles 1 & 2 : ce que le chunk contient lui-même (précis ou type seul)
@@ -93,7 +114,7 @@ def resolve_chunk_models(chunk: DocChunk, text: str, document_level_models: list
                 return heading_result
 
         return document_level_models
-        
+
     chunk_result = resolve_models(text)
     if chunk_result is not None:
         return chunk_result
@@ -113,11 +134,14 @@ def resolve_errors(text: str) -> list[str]:
 
     if seen:
         return seen
-    
+
     return None
 
 
-def resolve_chunk_errors(chunk_text: str, document_level_errors: list[str] | None) -> list[str] | None:
+def resolve_chunk_errors(
+        chunk_text: str,
+        document_level_errors: list[str] | None
+        ) -> list[str] | None:
     """
     Applique la logique complète à l'échelle d'un chunk :
     - règles 1 & 2 : ce que le chunk contient lui-même (précis ou type seul)
@@ -147,7 +171,7 @@ def resolve_date(text: str) -> str | None:
                 datetime(int(year), int(month), 1)  # validation du mois (1-12)
                 return f"{year}-{int(month):02d}"
 
-            elif kind == "text":
+            if kind == "text":
                 month_name, year = match.groups()
                 month = MONTHS_FR[month_name.lower()]
                 return f"{year}-{month:02d}"
@@ -182,7 +206,10 @@ def resolve_metadata(text: str, path: list[str]) -> dict:
         }
 
 
-def resolve_chunk_metadata(chunk: DocChunk, document_metadata: dict, enriched: str, path: list[str]) -> dict:
+def resolve_chunk_metadata(chunk: DocChunk,
+                           document_metadata: dict,
+                           enriched: str, path: list[str]
+                           ) -> dict:
     """
     Récupérère les métadonnées du chunk.
     """
@@ -190,10 +217,14 @@ def resolve_chunk_metadata(chunk: DocChunk, document_metadata: dict, enriched: s
     models = resolve_chunk_models(chunk, enriched, document_metadata["models"], path)
     errors = resolve_chunk_errors(enriched, document_metadata["errors"])
     page = resolve_chunk_page(chunk)
-
-    return {
+    metadata = {
+        "title": path[-1],
+        "path": path[:-1],
         "date": date,
+        "page": page,
+        "headings": chunk.meta.headings,
         "models": models,
         "errors": errors,
-        "page": page,
         }
+
+    return clean_metadata(metadata)
