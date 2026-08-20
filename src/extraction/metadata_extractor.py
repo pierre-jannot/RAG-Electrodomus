@@ -5,7 +5,8 @@ metadata.
 
 from docling_core.transforms.chunker import DocChunk
 
-from src.extraction.regex_extractor import resolve_date, resolve_errors, resolve_models, resolve_chunk_errors, resolve_chunk_models, resolve_chunk_page
+from src.extraction.regex_extractor import resolve_date, resolve_errors, resolve_models
+from src.extraction.regex_extractor import resolve_chunk_errors, resolve_chunk_models, resolve_chunk_page
 
 
 def clean_metadata(metadata: dict) -> dict:
