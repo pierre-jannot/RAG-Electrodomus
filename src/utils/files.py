@@ -22,5 +22,5 @@ def get_path_after(filepath: Path, target_folder: str) -> str | None:
     if target_folder in parts:
         idx = parts.index(target_folder)
         if idx + 1 < len(parts):
-            return parts[idx + 1:-1]
+            return parts[idx + 1:]
     return None

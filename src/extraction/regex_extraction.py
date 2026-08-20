@@ -8,6 +8,8 @@ Script de fonctions REGEX pour récupérer :
 import re
 from datetime import datetime
 
+from docling_core.transforms.chunker import DocChunk
+
 
 MONTHS_FR = {
     "janvier": 1, "février": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6,
@@ -57,13 +59,16 @@ def resolve_models(text: str) -> list[str] | None:
     return None
 
 
-def resolve_chunk_models(chunk_text: str, document_level_models: list[str] | None) -> list[str] | None:
+def resolve_chunk_models(chunk_text: str, document_level_models: list[str] | None, path: list[str]) -> list[str] | None:
     """
     Applique la logique complète à l'échelle d'un chunk :
     - règles 1 & 2 : ce que le chunk contient lui-même (précis ou type seul)
     - règle 3 : repli sur les modèles du document si le chunk n'en contient aucun
     - règle 4 : None si ni le chunk ni le document n'en contiennent
     """
+    if "FAQ" in path:
+        return document_level_models
+    
     chunk_result = resolve_models(chunk_text)
     if chunk_result is not None:
         return chunk_result
@@ -85,6 +90,7 @@ def resolve_errors(text: str) -> list[str]:
         return seen
     
     return None
+
 
 def resolve_chunk_errors(chunk_text: str, document_level_errors: list[str] | None) -> list[str] | None:
     """
@@ -126,6 +132,16 @@ def resolve_date(text: str) -> str | None:
 
     return None
 
+
+def resolve_chunk_page(chunk: DocChunk) -> int | None:
+    """Retourne le numéro de la première page couverte par le chunk, ou None si absent."""
+    for item in chunk.meta.doc_items:
+        for prov in item.prov:
+            if prov.page_no is not None:
+                return prov.page_no
+    return None
+
+
 def resolve_metadata(text: str) -> dict:
     date = resolve_date(text)
     models = resolve_models(text)
@@ -138,16 +154,15 @@ def resolve_metadata(text: str) -> dict:
         }
 
 
-def resolve_chunk_metadata(document_metadata: dict, text: str, is_faq: bool = False) -> dict:
+def resolve_chunk_metadata(chunk: DocChunk, document_metadata: dict, path: list[str]) -> dict:
     date = document_metadata["date"]
-    if is_faq:
-        models = document_metadata["models"]
-    else:
-        models = resolve_chunk_models(text, document_metadata["models"])
-    errors = resolve_chunk_errors(text, document_metadata["errors"])
+    models = resolve_chunk_models(chunk.text, document_metadata["models"], path)
+    errors = resolve_chunk_errors(chunk.text, document_metadata["errors"])
+    page = resolve_chunk_page(chunk)
 
     return {
         "date": date,
         "models": models,
         "errors": errors,
+        "page": page,
         }

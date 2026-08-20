@@ -145,7 +145,7 @@ def xlsx_to_docling_document(xlsx_path: str) -> DoclingDocument:
         if df.empty:
             continue
 
-        document.add_heading(text=parsed["doc_title"] or sheet_name, level=1)
+        document.add_heading(text=sheet_name, level=1)
         document.add_text(label=DocItemLabel.TEXT, text=parsed["doc_version"])
 
         columns = df.columns.tolist()
