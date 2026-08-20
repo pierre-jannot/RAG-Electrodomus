@@ -138,9 +138,12 @@ def resolve_metadata(text: str) -> dict:
         }
 
 
-def resolve_chunk_metadata(document_metadata: dict, text: str) -> dict:
+def resolve_chunk_metadata(document_metadata: dict, text: str, is_faq: bool = False) -> dict:
     date = document_metadata["date"]
-    models = resolve_chunk_models(text, document_metadata["models"])
+    if is_faq:
+        models = document_metadata["models"]
+    else:
+        models = resolve_chunk_models(text, document_metadata["models"])
     errors = resolve_chunk_errors(text, document_metadata["errors"])
 
     return {

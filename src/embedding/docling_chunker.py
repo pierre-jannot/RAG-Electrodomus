@@ -36,7 +36,7 @@ def build_chunker():
     return chunker
 
 
-def compute_chunks(chunker: HybridChunker, document: DoclingDocument):
+def compute_chunks(chunker: HybridChunker, document: DoclingDocument, path: str):
     """
     Fonction de séparation du document
     en chunks.
@@ -47,11 +47,12 @@ def compute_chunks(chunker: HybridChunker, document: DoclingDocument):
 
     for i, chunk in enumerate(raw_chunks):
         enriched = chunker.contextualize(chunk=chunk)
-        chunk_metadata = resolve_chunk_metadata(metadata, enriched)
+        chunk_metadata = resolve_chunk_metadata(metadata, enriched, "FAQ" in path)
         print(f"--------- Chunk {i} ---------")
         print(f"- Modèle(s) : {chunk_metadata["models"]} -")
         print(f"- Code(s) erreur : {chunk_metadata["errors"]} -")
         print(f"- Date : {chunk_metadata["date"]} -")
+        print(f"- Path : {path} -")
         print(f"- Headings : {chunk.meta.headings} -")
         print()
         print(enriched)
