@@ -38,23 +38,6 @@ PARENTHESES_PATTERN = re.compile(r"\([^)]*\)")
 ERROR_CODE_PATTERN = re.compile(r"\bE\d{2}\b")
 
 
-def clean_metadata(metadata: dict) -> dict:
-    """
-    Nettoie un dict de métadonnées pour Chroma :
-    - supprime les clés dont la valeur est None
-    - remplace les listes vides par une valeur scalaire vide (Chroma
-      interdit les listes vides, mais accepte une chaîne vide)
-    """
-    cleaned = {}
-    for key, value in metadata.items():
-        if value is None:
-            continue
-        if isinstance(value, list) and len(value) == 0:
-            continue
-        cleaned[key] = value
-    return cleaned
-
-
 def extract_specific_models(text: str) -> list[str]:
     """Modèles précis mentionnés, ex: ['LV-451', 'LV-452']."""
     return sorted(set(MODEL_PATTERN.findall(text)))
@@ -189,42 +172,3 @@ def resolve_chunk_page(chunk: DocChunk) -> int | None:
             if prov.page_no is not None:
                 return prov.page_no
     return None
-
-
-def resolve_metadata(text: str, path: list[str]) -> dict:
-    """
-    Récupérère les métadonnées du texte.
-    """
-    date = resolve_date(text)
-    models = resolve_models(text, path)
-    errors = resolve_errors(text)
-
-    return {
-        "date": date,
-        "models": models,
-        "errors": errors,
-        }
-
-
-def resolve_chunk_metadata(chunk: DocChunk,
-                           document_metadata: dict,
-                           enriched: str, path: list[str]
-                           ) -> dict:
-    """
-    Récupérère les métadonnées du chunk.
-    """
-    date = document_metadata["date"]
-    models = resolve_chunk_models(chunk, enriched, document_metadata["models"], path)
-    errors = resolve_chunk_errors(enriched, document_metadata["errors"])
-    page = resolve_chunk_page(chunk)
-    metadata = {
-        "title": path[-1],
-        "path": path[:-1],
-        "date": date,
-        "page": page,
-        "headings": chunk.meta.headings,
-        "models": models,
-        "errors": errors,
-        }
-
-    return clean_metadata(metadata)
