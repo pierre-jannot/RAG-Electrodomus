@@ -143,6 +143,9 @@ def resolve_chunk_page(chunk: DocChunk) -> int | None:
 
 
 def resolve_metadata(text: str) -> dict:
+    """
+    Récupérère les métadonnées du texte.
+    """
     date = resolve_date(text)
     models = resolve_models(text)
     errors = resolve_errors(text)
@@ -154,10 +157,13 @@ def resolve_metadata(text: str) -> dict:
         }
 
 
-def resolve_chunk_metadata(chunk: DocChunk, document_metadata: dict, path: list[str]) -> dict:
+def resolve_chunk_metadata(chunk: DocChunk, document_metadata: dict, enriched: str, path: list[str]) -> dict:
+    """
+    Récupérère les métadonnées du chunk.
+    """
     date = document_metadata["date"]
-    models = resolve_chunk_models(chunk.text, document_metadata["models"], path)
-    errors = resolve_chunk_errors(chunk.text, document_metadata["errors"])
+    models = resolve_chunk_models(enriched, document_metadata["models"], path)
+    errors = resolve_chunk_errors(enriched, document_metadata["errors"])
     page = resolve_chunk_page(chunk)
 
     return {

@@ -47,7 +47,7 @@ def compute_chunks(chunker: HybridChunker, document: DoclingDocument, path: str)
 
     for i, chunk in enumerate(raw_chunks):
         enriched = chunker.contextualize(chunk=chunk)
-        chunk_metadata = resolve_chunk_metadata(chunk, metadata, path)
+        chunk_metadata = resolve_chunk_metadata(chunk, metadata, enriched, path)
         print(f"--------- Chunk {i} ---------")
         print(f"- Modèle(s) : {chunk_metadata["models"]} -")
         print(f"- Code(s) erreur : {chunk_metadata["errors"]} -")
