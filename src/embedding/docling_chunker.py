@@ -8,8 +8,8 @@ from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTok
 from docling_core.types.doc import DoclingDocument
 from transformers import AutoTokenizer
 
-from core.config import load_settings
-from src.extraction.regex_extraction import resolve_metadata, resolve_chunk_metadata
+from src.core.config import load_settings
+from src.extraction.regex_extractor import resolve_metadata, resolve_chunk_metadata
 
 settings = load_settings()
 
@@ -42,7 +42,7 @@ def compute_chunks(chunker: HybridChunker, document: DoclingDocument, path: str)
     en chunks.
     """
     document_text = document.export_to_markdown()
-    metadata = resolve_metadata(document_text)
+    metadata = resolve_metadata(document_text, path)
     raw_chunks = list(chunker.chunk(dl_doc=document))
 
     for i, chunk in enumerate(raw_chunks):

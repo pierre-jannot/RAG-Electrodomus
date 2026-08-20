@@ -28,6 +28,13 @@ MODEL_PATTERN = re.compile(r"\b((?:FR|WX|LV)-\d{3,4})\b")
 
 DEVICE_TYPE_PATTERN = re.compile(r"\b(FR|WX|LV)\b(?!-\d)")
 
+SECTION_PATTERN = re.compile(
+    r"Mod[eè]les?\s+concern[ée]s?\s*:?\s*\n?(.*?)(?:\n\s*\n|\n#{1,6}\s|\Z)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+PARENTHESES_PATTERN = re.compile(r"\([^)]*\)")
+
 ERROR_CODE_PATTERN = re.compile(r"\bE\d{2}\b")
 
 
@@ -41,13 +48,24 @@ def extract_bare_device_types(text: str) -> list[str]:
     return sorted(set(DEVICE_TYPE_PATTERN.findall(text)))
 
 
-def resolve_models(text: str) -> list[str] | None:
+def resolve_models(text: str, path: list[str] = []) -> list[str] | None:
     """
     Résout les modèles/types associés à un texte selon la priorité :
     1. Modèle(s) précis (XX-999) s'ils existent
     2. Sinon type(s) d'appareil seul(s) (FR/WX/LV) s'ils existent
     3. Sinon None
     """
+    if "Procedures_SAV" in path:
+        match = SECTION_PATTERN.search(text)
+        if not match:
+            return None
+
+        section_text = match.group(1)
+
+        first_sentence = section_text.split(".", 1)[0]
+
+        text = PARENTHESES_PATTERN.sub("", first_sentence)
+
     specific = extract_specific_models(text)
     if specific:
         return specific
@@ -59,17 +77,24 @@ def resolve_models(text: str) -> list[str] | None:
     return None
 
 
-def resolve_chunk_models(chunk_text: str, document_level_models: list[str] | None, path: list[str]) -> list[str] | None:
+def resolve_chunk_models(chunk: DocChunk, text: str, document_level_models: list[str] | None, path: list[str]) -> list[str] | None:
     """
     Applique la logique complète à l'échelle d'un chunk :
     - règles 1 & 2 : ce que le chunk contient lui-même (précis ou type seul)
     - règle 3 : repli sur les modèles du document si le chunk n'en contient aucun
     - règle 4 : None si ni le chunk ni le document n'en contiennent
     """
-    if "FAQ" in path:
+    if "Procedures_SAV" in path:
+        headings = chunk.meta.headings or []
+        if headings:
+            last_heading = headings[-1]
+            heading_result = resolve_models(last_heading)
+            if heading_result is not None:
+                return heading_result
+
         return document_level_models
-    
-    chunk_result = resolve_models(chunk_text)
+        
+    chunk_result = resolve_models(text)
     if chunk_result is not None:
         return chunk_result
 
@@ -142,12 +167,12 @@ def resolve_chunk_page(chunk: DocChunk) -> int | None:
     return None
 
 
-def resolve_metadata(text: str) -> dict:
+def resolve_metadata(text: str, path: list[str]) -> dict:
     """
     Récupérère les métadonnées du texte.
     """
     date = resolve_date(text)
-    models = resolve_models(text)
+    models = resolve_models(text, path)
     errors = resolve_errors(text)
 
     return {
@@ -162,7 +187,7 @@ def resolve_chunk_metadata(chunk: DocChunk, document_metadata: dict, enriched: s
     Récupérère les métadonnées du chunk.
     """
     date = document_metadata["date"]
-    models = resolve_chunk_models(enriched, document_metadata["models"], path)
+    models = resolve_chunk_models(chunk, enriched, document_metadata["models"], path)
     errors = resolve_chunk_errors(enriched, document_metadata["errors"])
     page = resolve_chunk_page(chunk)
 
