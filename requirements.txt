@@ -1,5 +1,7 @@
+bm25s==0.3.10
 chromadb==1.5.9
 docling==2.120.3
 dotenv==0.9.9
 pylint==4.0.7
 sentence-transformers==6.0.0
+snowballstemmer==3.1.1

@@ -79,5 +79,7 @@ def chunk_directory(path: Path = settings.source_dir) -> list[DocChunk]:
         path = get_path_after(file, "Documentation_Electrodomus")
         doc_chunks = chunk_document(chunker, document, path)
         chunks.extend(doc_chunks)
+        print(f"Document {file} traité en {len(doc_chunks)} chunk(s).")
 
+    print(f"Chunking fini. {len(chunks)} chunks produits.")
     return chunks

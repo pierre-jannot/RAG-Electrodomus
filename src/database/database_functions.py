@@ -9,13 +9,13 @@ import uuid
 import chromadb
 
 from src.embedding.docling_chunker import chunk_directory
-from src.database.embedding_function import ChromaEmbeddingFunction
+from src.embedding.dense_embedding import ChromaDenseEmbeddingFunction
 from src.core.config import load_settings
 
 settings = load_settings()
 
 
-def get_collection(
+def get_dense_collection(
     persist_path: str = settings.db_dir,
     collection_name: str = settings.collection_name,
 ) -> chromadb.Collection:
@@ -23,18 +23,20 @@ def get_collection(
     Fonction de création/récupération de la base de données.
     """
     client = chromadb.PersistentClient(path=persist_path)
-    collection = client.get_or_create_collection(
-        name=collection_name,
-        embedding_function=ChromaEmbeddingFunction(),
-        metadata={"hnsw:space": "cosine"},
-    )
-    return collection
+    try:
+        return client.get_collection(name=collection_name)
+    except Exception:
+        return client.create_collection(
+            name=collection_name,
+            embedding_function=ChromaDenseEmbeddingFunction(),
+            metadata={"hnsw:space": "cosine"},
+        )
 
 
 def ingest_chunks(
     collection: chromadb.Collection,
     chunks_data: list[dict[str, Any]],
-    batch_size: int = 50,
+    batch_size: int = 100,
 ) -> None:
     """
     chunks_data : liste de dicts {"text": str, "metadata": dict, "id": str (optionnel)}
@@ -56,6 +58,6 @@ def populate_database():
     Fonction permettant la récupération des documents,
     leur chunking et ajout dans la base de données.
     """
-    collection = get_collection()
+    collection = get_dense_collection()
     chunks_data = chunk_directory()
     ingest_chunks(collection=collection, chunks_data=chunks_data)

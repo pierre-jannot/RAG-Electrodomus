@@ -17,7 +17,7 @@ settings = load_settings()
 
 
 @register_embedding_function
-class ChromaEmbeddingFunction(EmbeddingFunction):
+class ChromaDenseEmbeddingFunction(EmbeddingFunction):
     """Wrapper sentence-transformers pour le modèle choisi en config,
     utilisable par Chroma."""
 
@@ -47,8 +47,8 @@ class ChromaEmbeddingFunction(EmbeddingFunction):
         return {"model_name": self.model_name, "device": self.device}
 
     @staticmethod
-    def build_from_config(config: Dict[str, Any]) -> "ChromaEmbeddingFunction":
-        return ChromaEmbeddingFunction(
+    def build_from_config(config: Dict[str, Any]) -> "ChromaDenseEmbeddingFunction":
+        return ChromaDenseEmbeddingFunction(
             model_name=config["model_name"],
             device=config.get("device"),
         )
