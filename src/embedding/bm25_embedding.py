@@ -26,7 +26,7 @@ def bm25_tokenize(documents: list[str]) -> bm25s.tokenization.Tokenized:
     return bm25s.tokenize(
         documents,
         stopwords=FRENCH_STOPWORDS,
-        stemmer=FRENCH_STEMMER.stemWord,
+        stemmer=FRENCH_STEMMER.stemWords,
     )
 
 

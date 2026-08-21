@@ -172,3 +172,32 @@ def resolve_chunk_page(chunk: DocChunk) -> int | None:
             if prov.page_no is not None:
                 return prov.page_no
     return None
+
+
+def build_element_clause(element_list: list[str], element_name: str) -> dict | None:
+    """
+    Fonction de formattage des modèles et erreurs en where clause Chroma.
+    """
+    if len(element_list)>1:
+        element_clause = []
+        for element in element_list:
+            element_clause.append({f"{element_name}": {"$contains": element}})
+        return {"$or": element_clause}
+    if len(element_list)==1:
+        return {f"{element_name}": {"$contains": element_list[0]}}
+    return None
+
+
+def resolve_query_where_clause(question: str) -> dict:
+    """Fonction de construction de la clause de filtrage de la query Chroma."""
+    models = extract_specific_models(question)
+    errors = resolve_errors(question)
+    models_clause = build_element_clause(models, "models")
+    errors_clause = build_element_clause(errors, "errors")
+    if models_clause and errors_clause:
+        return {"$and": [models_clause, errors_clause]}
+    if models_clause:
+        return models_clause
+    if errors_clause:
+        return errors_clause
+    return None

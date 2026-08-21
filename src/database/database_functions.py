@@ -8,9 +8,9 @@ import uuid
 
 import chromadb
 
-from src.embedding.docling_chunker import chunk_directory
-from src.embedding.dense_embedding import ChromaDenseEmbeddingFunction
 from src.core.config import load_settings
+from src.embedding.dense_embedding import ChromaDenseEmbeddingFunction
+from src.embedding.docling_chunker import chunk_directory
 
 settings = load_settings()
 
