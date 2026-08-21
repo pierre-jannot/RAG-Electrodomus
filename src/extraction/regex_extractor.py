@@ -8,6 +8,8 @@ Script de fonctions REGEX pour récupérer :
 import re
 from datetime import datetime
 
+from docling_core.transforms.chunker import DocChunk
+
 
 MONTHS_FR = {
     "janvier": 1, "février": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6,
@@ -26,6 +28,13 @@ MODEL_PATTERN = re.compile(r"\b((?:FR|WX|LV)-\d{3,4})\b")
 
 DEVICE_TYPE_PATTERN = re.compile(r"\b(FR|WX|LV)\b(?!-\d)")
 
+SECTION_PATTERN = re.compile(
+    r"Mod[eè]les?\s+concern[ée]s?\s*:?\s*\n?(.*?)(?:\n\s*\n|\n#{1,6}\s|\Z)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+PARENTHESES_PATTERN = re.compile(r"\([^)]*\)")
+
 ERROR_CODE_PATTERN = re.compile(r"\bE\d{2}\b")
 
 
@@ -39,13 +48,24 @@ def extract_bare_device_types(text: str) -> list[str]:
     return sorted(set(DEVICE_TYPE_PATTERN.findall(text)))
 
 
-def resolve_models(text: str) -> list[str] | None:
+def resolve_models(text: str, path: list[str] = []) -> list[str] | None:
     """
     Résout les modèles/types associés à un texte selon la priorité :
     1. Modèle(s) précis (XX-999) s'ils existent
     2. Sinon type(s) d'appareil seul(s) (FR/WX/LV) s'ils existent
     3. Sinon None
     """
+    if "Procedures_SAV" in path:
+        match = SECTION_PATTERN.search(text)
+        if not match:
+            return None
+
+        section_text = match.group(1)
+
+        first_sentence = section_text.split(".", 1)[0]
+
+        text = PARENTHESES_PATTERN.sub("", first_sentence)
+
     specific = extract_specific_models(text)
     if specific:
         return specific
@@ -57,14 +77,28 @@ def resolve_models(text: str) -> list[str] | None:
     return None
 
 
-def resolve_chunk_models(chunk_text: str, document_level_models: list[str] | None) -> list[str] | None:
+def resolve_chunk_models(
+        chunk: DocChunk,
+        text: str,
+        document_level_models: list[str] | None, path: list[str]
+        ) -> list[str] | None:
     """
     Applique la logique complète à l'échelle d'un chunk :
     - règles 1 & 2 : ce que le chunk contient lui-même (précis ou type seul)
     - règle 3 : repli sur les modèles du document si le chunk n'en contient aucun
     - règle 4 : None si ni le chunk ni le document n'en contiennent
     """
-    chunk_result = resolve_models(chunk_text)
+    if "Procedures_SAV" in path:
+        headings = chunk.meta.headings or []
+        if headings:
+            last_heading = headings[-1]
+            heading_result = resolve_models(last_heading)
+            if heading_result is not None:
+                return heading_result
+
+        return document_level_models
+
+    chunk_result = resolve_models(text)
     if chunk_result is not None:
         return chunk_result
 
@@ -83,10 +117,14 @@ def resolve_errors(text: str) -> list[str]:
 
     if seen:
         return seen
-    
+
     return None
 
-def resolve_chunk_errors(chunk_text: str, document_level_errors: list[str] | None) -> list[str] | None:
+
+def resolve_chunk_errors(
+        chunk_text: str,
+        document_level_errors: list[str] | None
+        ) -> list[str] | None:
     """
     Applique la logique complète à l'échelle d'un chunk :
     - règles 1 & 2 : ce que le chunk contient lui-même (précis ou type seul)
@@ -116,7 +154,7 @@ def resolve_date(text: str) -> str | None:
                 datetime(int(year), int(month), 1)  # validation du mois (1-12)
                 return f"{year}-{int(month):02d}"
 
-            elif kind == "text":
+            if kind == "text":
                 month_name, year = match.groups()
                 month = MONTHS_FR[month_name.lower()]
                 return f"{year}-{month:02d}"
@@ -126,25 +164,11 @@ def resolve_date(text: str) -> str | None:
 
     return None
 
-def resolve_metadata(text: str) -> dict:
-    date = resolve_date(text)
-    models = resolve_models(text)
-    errors = resolve_errors(text)
 
-    return {
-        "date": date,
-        "models": models,
-        "errors": errors,
-        }
-
-
-def resolve_chunk_metadata(document_metadata: dict, text: str) -> dict:
-    date = document_metadata["date"]
-    models = resolve_chunk_models(text, document_metadata["models"])
-    errors = resolve_chunk_errors(text, document_metadata["errors"])
-
-    return {
-        "date": date,
-        "models": models,
-        "errors": errors,
-        }
+def resolve_chunk_page(chunk: DocChunk) -> int | None:
+    """Retourne le numéro de la première page couverte par le chunk, ou None si absent."""
+    for item in chunk.meta.doc_items:
+        for prov in item.prov:
+            if prov.page_no is not None:
+                return prov.page_no
+    return None

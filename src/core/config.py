@@ -20,6 +20,8 @@ class Settings:
     et des fonctions utilitaires.
     """
     source_dir: Path
+    db_dir: Path
+    collection_name: str
     max_tokens: int
     min_tokens: int
     embed_model: str
@@ -41,12 +43,16 @@ def load_settings() -> Settings:
     Fonction d'initialisation des variables d'environnement.
     """
     source_dir = os.getenv("RAG_SOURCE_DIR", "data/corpus")
+    db_dir = os.getenv("DATABASE_PATH", "./chroma_db")
+    collection_name = os.getenv("COLLECTION_NAME", "rag_electrodomus")
     max_tokens = os.getenv("MAX_TOKENS", "512")
     min_tokens = os.getenv("MIN_TOKENS", "200")
     embed_model = os.getenv("EMBED_MODEL", "BAAI/bge-m3")
 
     settings = Settings(
         source_dir=Path(source_dir),
+        db_dir=Path(db_dir),
+        collection_name=collection_name,
         max_tokens=max_tokens,
         min_tokens=min_tokens,
         embed_model=embed_model,

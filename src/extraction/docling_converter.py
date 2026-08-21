@@ -24,7 +24,8 @@ FIRST_LINE_NOISE_VALUES = {
     "ELECTRODOMUS — Documentation interne",
 }
 
-NOISE_TEXTS = ["Ce bulletin prévaut sur la documentation produit antérieure (manuels et référentiel des codes erreur) pour les points qu'il traite."]
+NOISE_TEXTS = ["Ce bulletin prévaut sur la documentation produit antérieure "
+"(manuels et référentiel des codes erreur) pour les points qu'il traite."]
 
 
 def build_converter() -> DocumentConverter:
@@ -145,7 +146,7 @@ def xlsx_to_docling_document(xlsx_path: str) -> DoclingDocument:
         if df.empty:
             continue
 
-        document.add_heading(text=parsed["doc_title"] or sheet_name, level=1)
+        document.add_heading(text=sheet_name, level=1)
         document.add_text(label=DocItemLabel.TEXT, text=parsed["doc_version"])
 
         columns = df.columns.tolist()
