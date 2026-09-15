@@ -26,6 +26,10 @@ def build_prompt(context: str, rag_results: list[dict]) -> str:
     Fonction de production d'un prompt à partir
     d'un contexte et de résultats RAG.
     """
+    if not rag_results:
+        rag_answer = ("Aucun résultat — vérifiez que le filtre correspond à des chunks existants "
+            "(collection.get(where=where_clause) pour diagnostiquer).")
+
     rag_answer = build_rag_answer(rag_results)
 
     rag_prompt = f"**Question utilisateur :**\n{context}\n\n"

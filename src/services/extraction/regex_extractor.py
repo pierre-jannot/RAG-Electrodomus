@@ -51,6 +51,17 @@ PARENTHESES_PATTERN = re.compile(r"\([^)]*\)")
 ERROR_CODE_PATTERN = re.compile(r"\bE\d{2}\b")
 
 
+def text_to_bare_device_type(text: str) -> str:
+    """Remplace les occurences de noms d'électroménager
+    par leur type."""
+    text = text.lower().replace('-', ' ')
+    text = text.replace('lave linge', 'WX')
+    text = text.replace('lave vaisselle', 'LV')
+    text = text.replace('four', 'FR')
+    text = text.replace('four encastrable', 'FR')
+    return text
+
+
 def extract_specific_models(text: str) -> list[str]:
     """Modèles précis mentionnés, ex: ['LV-451', 'LV-452']."""
     return sorted(set(MODEL_PATTERN.findall(text)))
@@ -225,6 +236,9 @@ def build_element_clause(element_list: list[str], element_name: str) -> dict | N
 def resolve_query_where_clause(question: str) -> dict:
     """Fonction de construction de la clause de filtrage de la query Chroma."""
     models = extract_specific_models(question)
+    if not models:
+        normalized_question = text_to_bare_device_type(question)
+        models = extract_bare_device_types(normalized_question)
     errors = resolve_errors(question)
     models_clause = build_element_clause(models, "models")
     errors_clause = build_element_clause(errors, "errors")

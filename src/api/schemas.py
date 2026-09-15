@@ -16,6 +16,25 @@ class QuestionRequest(BaseModel):
         examples=["Je n'arrive plus à fermer la porte de mon lave-linge 350, que dois-je faire ?"],
     )
 
+
+class DetailedQuestionRequest(BaseModel):
+    """Question posée avec paramètres."""
+ 
+    question: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="Question de l'utilisateur en langage naturel.",
+        examples=["Je n'arrive plus à fermer la porte de mon lave-linge 350, que dois-je faire ?"],
+    )
+    parametres: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="Paramètres de filtrage.",
+        examples=["Modèle de l'électroménager - Code d'erreur"],
+    )
+
  
 class AnswerResponse(BaseModel):
     """Réponse renvoyée par l'API."""

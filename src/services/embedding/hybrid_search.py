@@ -8,7 +8,7 @@ from src.database.database_functions import get_dense_collection
 from src.services.embedding.bm25_embedding import build_bm25_index, bm25_tokenize
  
  
-_reranker = CrossEncoder("BAAI/bge-reranker-base", max_length=512)
+_reranker = CrossEncoder("BAAI/bge-reranker-v2-m3", max_length=512)
  
 collection = get_dense_collection()
  
@@ -71,7 +71,7 @@ def rerank(collection, question: str, candidate_ids: list[str], top_k: int) -> l
 def hybrid_search(
     question: str,
     where_clause: dict | None = None,
-    n_candidates: int = 30,
+    n_candidates: int = 5,
     top_k: int = 5,
 ) -> list[dict]:
     """
