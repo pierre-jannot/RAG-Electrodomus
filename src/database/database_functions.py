@@ -3,18 +3,20 @@ Script de création ou récupération de la
 base de données Chroma.
 """
 
+from functools import lru_cache
 from typing import Any
 import uuid
 
 import chromadb
 
-from src.embedding.docling_chunker import chunk_directory
-from src.embedding.dense_embedding import ChromaDenseEmbeddingFunction
 from src.core.config import load_settings
+from src.services.embedding.dense_embedding import ChromaDenseEmbeddingFunction
+from src.services.embedding.docling_chunker import chunk_directory
 
 settings = load_settings()
 
 
+@lru_cache(maxsize=1)
 def get_dense_collection(
     persist_path: str = settings.db_dir,
     collection_name: str = settings.collection_name,

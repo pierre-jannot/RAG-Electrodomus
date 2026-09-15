@@ -25,6 +25,9 @@ class Settings:
     max_tokens: int
     min_tokens: int
     embed_model: str
+    ollama_model: str
+    groq_model: str
+    groq_api_key: str
 
     def validate_folder(self) -> None:
         """Validation des variables d'environnement au lancement du projet"""
@@ -48,6 +51,9 @@ def load_settings() -> Settings:
     max_tokens = os.getenv("MAX_TOKENS", "512")
     min_tokens = os.getenv("MIN_TOKENS", "200")
     embed_model = os.getenv("EMBED_MODEL", "BAAI/bge-m3")
+    ollama_model = os.getenv("OLLAMA_MODEL", "ministral-3:latest")
+    groq_model = os.getenv("GROQ_MODEL", "gpt-oss-20b")
+    groq_api_key = os.getenv("GROQ_API_KEY", None)
 
     settings = Settings(
         source_dir=Path(source_dir),
@@ -56,6 +62,9 @@ def load_settings() -> Settings:
         max_tokens=max_tokens,
         min_tokens=min_tokens,
         embed_model=embed_model,
+        ollama_model=ollama_model,
+        groq_model=groq_model,
+        groq_api_key=groq_api_key,
     )
     settings.validate_folder()
     return settings
