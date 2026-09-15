@@ -2,7 +2,17 @@
 Modèles Pydantic définissant les contrats d'entrée/sortie de l'API.
 """
 
+from enum import Enum
+
 from pydantic import BaseModel, Field
+
+
+class ApplianceType(str, Enum):
+    """Types d'électroménager reconnus pour le filtrage explicite."""
+ 
+    LV = "LV"  # Lave-vaisselle
+    WX = "WX"  # Lave-linge (à ajuster si le libellé réel diffère)
+    FR = "FR"  # Réfrigérateur (à ajuster si le libellé réel diffère)
 
 
 class QuestionRequest(BaseModel):
@@ -27,12 +37,14 @@ class DetailedQuestionRequest(BaseModel):
         description="Question de l'utilisateur en langage naturel.",
         examples=["Je n'arrive plus à fermer la porte de mon lave-linge 350, que dois-je faire ?"],
     )
-    parametres: str = Field(
-        ...,
-        min_length=1,
-        max_length=2000,
-        description="Paramètres de filtrage.",
-        examples=["Modèle de l'électroménager - Code d'erreur"],
+    appliance_type: ApplianceType = Field(
+        ..., description="Type d'électroménager concerné."
+    )
+    model_id: str | None = Field(
+        default=None, description="Identifiant du modèle, si connu."
+    )
+    error_code: str | None = Field(
+        default=None, description="Code erreur mentionné, si applicable."
     )
 
  

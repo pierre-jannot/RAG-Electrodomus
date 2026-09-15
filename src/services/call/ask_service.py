@@ -11,14 +11,37 @@ from src.utils.dict import get_leaf_strings
 client = GroqClient()
 # question = "Je n'arrive plus à fermer la porte de mon lave-linge 350, que dois-je faire ?"
 
-def ask(request: str, request_parameters: str = None) -> str:
+def ask(request: str) -> str:
     """Fonction pour question utilisateur sur le corpus Electrodomus."""
 
-    where_clause = resolve_query_where_clause(request_parameters if request_parameters else request)
+    where_clause = resolve_query_where_clause(request)
     model_and_error = get_leaf_strings(where_clause)
 
     request = f"{' - '.join(model_and_error)} | {request}"
 
+    results = hybrid_search(request, where_clause=where_clause, top_k=5)
+
+    prompt = build_prompt(request, results)
+    response = client.ask(prompt=prompt)
+
+    return response
+
+
+def ask_filtered(request: str, type: str | None, id: str | None, error_code: str | None):
+    """Fonction d'appel avec paramètres."""
+    if type and id:
+        filter = f"{type}-{id}"
+    elif type:
+        filter = type
+    else:
+        filter = ""
+    if error_code:
+        filter += f" - {error_code}"
+
+    if filter:
+        request = f"{filter} | {request}"
+
+    where_clause = resolve_query_where_clause(filter)
     results = hybrid_search(request, where_clause=where_clause, top_k=5)
 
     prompt = build_prompt(request, results)
