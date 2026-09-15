@@ -16,13 +16,26 @@ MONTHS_FR = {
     "juillet": 7, "août": 8, "septembre": 9, "octobre": 10, "novembre": 11, "décembre": 12,
 }
 MONTHS_PATTERN = "|".join(MONTHS_FR.keys())
-
 SPACE = r"[\s\xa0]+"
 
-DATE_PATTERNS = [
-    (re.compile(r"\b(\d{1,2})[/\-](\d{4})\b"), "numeric"),
-    (re.compile(rf"\b({MONTHS_PATTERN}){SPACE}(\d{{4}})\b", re.IGNORECASE), "text"),
+# Niveau 1 : date complète
+FULL_DATE_PATTERNS = [
+    (re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b"), "full_numeric"),
+    (re.compile(rf"\b(\d{{1,2}}){SPACE}({MONTHS_PATTERN}){SPACE}(\d{{4}})\b", re.IGNORECASE), "full_text"),
 ]
+
+# Niveau 2 : mois/année
+MONTH_YEAR_PATTERNS = [
+    (re.compile(r"\b(\d{1,2})/(\d{4})\b"), "numeric"),  # "/" seul, plus [/\-]
+    (re.compile(rf"\b({MONTHS_PATTERN}){SPACE}(\d{{4}})\b", re.IGNORECASE), "text"),  # inchangé
+]
+
+# Niveau 3 : année seule
+YEAR_PATTERNS = [
+    (re.compile(r"\b(20\d{2}|2100)\b"), "year"),
+]
+
+DATE_TIERS = [FULL_DATE_PATTERNS, MONTH_YEAR_PATTERNS, YEAR_PATTERNS]
 
 MODEL_PATTERN = re.compile(r"\b((?:FR|WX|LV)-\d{3,4})\b")
 
@@ -55,7 +68,7 @@ def resolve_models(text: str, path: list[str] = []) -> list[str] | None:
     2. Sinon type(s) d'appareil seul(s) (FR/WX/LV) s'ils existent
     3. Sinon None
     """
-    if "Procedures_SAV" in path:
+    if path and "Procedures_SAV" in path:
         match = SECTION_PATTERN.search(text)
         if not match:
             return None
@@ -88,7 +101,7 @@ def resolve_chunk_models(
     - règle 3 : repli sur les modèles du document si le chunk n'en contient aucun
     - règle 4 : None si ni le chunk ni le document n'en contiennent
     """
-    if "Procedures_SAV" in path:
+    if path and "Procedures_SAV" in path:
         headings = chunk.meta.headings or []
         if headings:
             last_heading = headings[-1]
@@ -140,27 +153,46 @@ def resolve_chunk_errors(
 
 def resolve_date(text: str) -> str | None:
     """
-    Cherche une date mois/année dans le texte (format MM/YYYY ou "mois YYYY").
-    Retourne YYYY-MM, ou None si rien trouvé.
+    Cherche une date dans le texte, du plus précis au moins précis :
+    1. date complète (JJ/MM/AAAA ou "JJ mois AAAA")     -> YYYY-MM-DD
+    2. mois/année (MM/AAAA ou "mois AAAA")              -> YYYY-MM
+    3. année seule (AAAA)                               -> YYYY
+    Retourne None si rien trouvé à aucun niveau.
     """
-    for pattern, kind in DATE_PATTERNS:
-        match = pattern.search(text)
-        if not match:
-            continue
+    for patterns in DATE_TIERS:
+        for pattern, kind in patterns:
+            match = pattern.search(text)
+            if not match:
+                continue
 
-        try:
-            if kind == "numeric":
-                month, year = match.groups()
-                datetime(int(year), int(month), 1)  # validation du mois (1-12)
-                return f"{year}-{int(month):02d}"
+            try:
+                if kind == "full_numeric":
+                    day, month, year = match.groups()
+                    datetime(int(year), int(month), int(day))  # valide jour/mois
+                    return f"{year}-{int(month):02d}-{int(day):02d}"
 
-            if kind == "text":
-                month_name, year = match.groups()
-                month = MONTHS_FR[month_name.lower()]
-                return f"{year}-{month:02d}"
+                if kind == "full_text":
+                    day, month_name, year = match.groups()
+                    month = MONTHS_FR[month_name.lower()]
+                    datetime(int(year), month, int(day))
+                    return f"{year}-{month:02d}-{int(day):02d}"
 
-        except ValueError:
-            continue
+                if kind == "numeric":
+                    month, year = match.groups()
+                    datetime(int(year), int(month), 1)
+                    return f"{year}-{int(month):02d}"
+
+                if kind == "text":
+                    month_name, year = match.groups()
+                    month = MONTHS_FR[month_name.lower()]
+                    return f"{year}-{month:02d}"
+
+                if kind == "year":
+                    (year,) = match.groups()
+                    return year
+
+            except (ValueError, KeyError):
+                continue
 
     return None
 
@@ -178,6 +210,8 @@ def build_element_clause(element_list: list[str], element_name: str) -> dict | N
     """
     Fonction de formattage des modèles et erreurs en where clause Chroma.
     """
+    if not element_list:
+        return None
     if len(element_list)>1:
         element_clause = []
         for element in element_list:

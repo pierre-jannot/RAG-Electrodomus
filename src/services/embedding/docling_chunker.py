@@ -12,8 +12,8 @@ from docling_core.types.doc import DoclingDocument
 from transformers import AutoTokenizer
 
 from src.core.config import load_settings
-from src.extraction.docling_converter import convert_file, build_converter
-from src.extraction.metadata_extractor import resolve_metadata, resolve_chunk_metadata
+from src.services.extraction.docling_converter import convert_file, build_converter
+from src.services.extraction.metadata_extractor import resolve_metadata, resolve_chunk_metadata
 from src.utils.files import list_files, get_path_after
 
 settings = load_settings()

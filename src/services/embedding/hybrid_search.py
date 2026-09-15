@@ -5,11 +5,12 @@ Script des fonctions d'hybrid search.
 from sentence_transformers import CrossEncoder
  
 from src.database.database_functions import get_dense_collection
-from src.embedding.bm25_embedding import build_bm25_index, bm25_tokenize
+from src.services.embedding.bm25_embedding import build_bm25_index, bm25_tokenize
  
  
-_reranker = CrossEncoder("BAAI/bge-reranker-v2-m3", max_length=512)
+_reranker = CrossEncoder("BAAI/bge-reranker-base", max_length=512)
  
+collection = get_dense_collection()
  
 def rrf(ranked_lists: list[list[str]], k: int = 60) -> list[str]:
     """Fusionne plusieurs listes d'ids classées via Reciprocal Rank Fusion."""
@@ -46,7 +47,7 @@ def rerank(collection, question: str, candidate_ids: list[str], top_k: int) -> l
     """Reranking cross-encoder sur les candidats sortants du premier reranking"""
     if not candidate_ids:
         return []
- 
+
     candidates = collection.get(ids=candidate_ids, include=["documents", "metadatas"])
     id_to_doc = dict(zip(candidates["ids"], candidates["documents"]))
     id_to_meta = dict(zip(candidates["ids"], candidates["metadatas"]))
@@ -76,8 +77,7 @@ def hybrid_search(
     """
     Fonction d'exécution de l'hybrid search.
     """
-    collection = get_dense_collection()
- 
+
     dense_ids = dense_search(collection, question, where_clause, n=n_candidates)
     bm25_ids = bm25_search(collection, question, where_clause, n=n_candidates)
  

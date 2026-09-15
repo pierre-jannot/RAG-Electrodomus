@@ -5,9 +5,9 @@ metadata.
 
 from docling_core.transforms.chunker import DocChunk
 
-from src.extraction.regex_extractor import resolve_date, resolve_errors, resolve_models
-from src.extraction.regex_extractor import resolve_chunk_errors, resolve_chunk_models
-from src.extraction.regex_extractor import resolve_chunk_page
+from src.services.extraction.regex_extractor import resolve_date, resolve_errors, resolve_models
+from src.services.extraction.regex_extractor import resolve_chunk_errors, resolve_chunk_models
+from src.services.extraction.regex_extractor import resolve_chunk_page
 
 
 def clean_metadata(metadata: dict) -> dict:
@@ -54,8 +54,8 @@ def resolve_chunk_metadata(chunk: DocChunk,
     errors = resolve_chunk_errors(enriched, document_metadata["errors"])
     page = resolve_chunk_page(chunk)
     metadata = {
-        "title": path[-1],
-        "path": path[:-1],
+        "title": path[-1] if path else "",
+        "path": path[:-1] if path else "",
         "date": date,
         "page": page,
         "headings": chunk.meta.headings,
