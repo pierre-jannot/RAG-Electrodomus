@@ -27,7 +27,7 @@ def ask_question(request: QuestionRequest) -> AnswerResponse:
         raise HTTPException(
             status_code=503, detail="Service LLM momentanément indisponible."
         ) from e
- 
+
     return AnswerResponse(answer=answer)
 
 
@@ -38,7 +38,11 @@ def ask_question_filtered(request: DetailedQuestionRequest) -> AnswerResponse:
     et renvoie la réponse.
     """
     try:
-        answer = ask_filtered(request.question, request.appliance_type, request.model_id, request.error_code)
+        answer = ask_filtered(
+            request.question,
+            request.appliance_type,
+            request.model_id,
+            request.error_code)
     except GroqConfigError as e:
         raise HTTPException(
             status_code=500, detail="Erreur de configuration du service LLM."
@@ -47,5 +51,5 @@ def ask_question_filtered(request: DetailedQuestionRequest) -> AnswerResponse:
         raise HTTPException(
             status_code=503, detail="Service LLM momentanément indisponible."
         ) from e
- 
+
     return AnswerResponse(answer=answer)

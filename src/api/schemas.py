@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 class ApplianceType(str, Enum):
     """Types d'électroménager reconnus pour le filtrage explicite."""
- 
+
     LV = "LV"  # Lave-vaisselle
     WX = "WX"  # Lave-linge (à ajuster si le libellé réel diffère)
     FR = "FR"  # Réfrigérateur (à ajuster si le libellé réel diffère)
@@ -17,7 +17,7 @@ class ApplianceType(str, Enum):
 
 class QuestionRequest(BaseModel):
     """Requête entrante : la question posée par l'utilisateur."""
- 
+
     question: str = Field(
         ...,
         min_length=1,
@@ -29,7 +29,7 @@ class QuestionRequest(BaseModel):
 
 class DetailedQuestionRequest(BaseModel):
     """Question posée avec paramètres."""
- 
+
     question: str = Field(
         ...,
         min_length=1,
@@ -47,8 +47,8 @@ class DetailedQuestionRequest(BaseModel):
         default=None, description="Code erreur mentionné, si applicable."
     )
 
- 
+
 class AnswerResponse(BaseModel):
     """Réponse renvoyée par l'API."""
- 
+
     answer: str

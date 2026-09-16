@@ -14,8 +14,8 @@ router = APIRouter(prefix="/options", tags=["options"])
 def list_appliance_types() -> list[ApplianceType]:
     """Liste fixe des types d'électroménager disponibles."""
     return list(ApplianceType)
- 
- 
+
+
 @router.get("/{appliance_type}/models", response_model=list[str])
 def list_models(appliance_type: ApplianceType) -> list[str]:
     """
@@ -23,8 +23,8 @@ def list_models(appliance_type: ApplianceType) -> list[str]:
     d'électroménager donné.
     """
     return get_available_models(appliance_type)
- 
- 
+
+
 @router.get("/{appliance_type}/{model_id}/error-codes", response_model=list[str])
 def list_error_codes(appliance_type: ApplianceType, model_id: str) -> list[str]:
     """
