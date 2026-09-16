@@ -42,6 +42,10 @@ def ask_filtered(request: str, appliance_type: str | None, appliance_id: str | N
         request = f"{filter} | {request}"
 
     where_clause = resolve_query_where_clause(filter)
+    model_and_error = get_leaf_strings(where_clause)
+
+    request = f"{' - '.join(model_and_error)} | {request}"
+
     results = hybrid_search(request, where_clause=where_clause, top_k=5)
 
     prompt = build_prompt(request, results)

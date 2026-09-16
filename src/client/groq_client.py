@@ -41,8 +41,8 @@ class GroqClient:
 
     def ask(
             self,
-            prompt: str = SYSTEM_PROMPT,
-            system: str | None = None,
+            prompt: str | None = None,
+            system: str = SYSTEM_PROMPT,
             model: str | None = None,
     ) -> str:
         """Appel au LLM renseigné sur le client Groq."""
