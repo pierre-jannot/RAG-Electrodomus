@@ -21,7 +21,9 @@ SPACE = r"[\s\xa0]+"
 # Niveau 1 : date complète
 FULL_DATE_PATTERNS = [
     (re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b"), "full_numeric"),
-    (re.compile(rf"\b(\d{{1,2}}){SPACE}({MONTHS_PATTERN}){SPACE}(\d{{4}})\b", re.IGNORECASE), "full_text"),
+    (re.compile(
+        rf"\b(\d{{1,2}}){SPACE}({MONTHS_PATTERN}){SPACE}(\d{{4}})\b", re.IGNORECASE),
+        "full_text"),
 ]
 
 # Niveau 2 : mois/année

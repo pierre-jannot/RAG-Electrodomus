@@ -27,21 +27,25 @@ def ask(request: str) -> str:
     return response
 
 
-def ask_filtered(request: str, appliance_type: str | None, appliance_id: str | None, error_code: str | None):
+def ask_filtered(
+        request: str,
+        appliance_type: str | None,
+        appliance_id: str | None,
+        error_code: str | None):
     """Fonction d'appel avec paramètres."""
     if appliance_type and appliance_id:
-        filter = f"{appliance_type}-{appliance_id}"
+        filter_str = f"{appliance_type}-{appliance_id}"
     elif appliance_type:
-        filter = appliance_type
+        filter_str = appliance_type
     else:
-        filter = ""
+        filter_str = ""
     if error_code:
-        filter += f" - {error_code}"
+        filter_str += f" - {error_code}"
 
-    if filter:
-        request = f"{filter} | {request}"
+    if filter_str:
+        request = f"{filter_str} | {request}"
 
-    where_clause = resolve_query_where_clause(filter)
+    where_clause = resolve_query_where_clause(filter_str)
     model_and_error = get_leaf_strings(where_clause)
 
     request = f"{' - '.join(model_and_error)} | {request}"
