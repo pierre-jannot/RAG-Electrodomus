@@ -48,6 +48,47 @@ class DetailedQuestionRequest(BaseModel):
     )
 
 
+class MetadataRequest(BaseModel):
+    """Schéma des paramètres d'appel d'un ajout de métadonnées à Chroma."""
+
+    key: str = Field(
+        ...,
+        min_length=1,
+        max_length=15,
+        description="Clé de la métadonnée à ajouter/modifier."
+    )
+
+    value: str |int = Field(
+            description="Valeur de la métadonnée."
+        )
+
+
+class MetadataFilteredRequest(BaseModel):
+    """Schéma des paramètres d'appel d'un ajout de métadonnées à Chroma."""
+
+    filter_key: str = Field(
+            ...,
+            min_length=1,
+            max_length=15,
+            description="Clé de la métadonnée de filtrage."
+    )
+
+    filter_value: str |int = Field(
+            description="Valeur de la métadonnée de filtrage."
+        )
+
+    key: str = Field(
+        ...,
+        min_length=1,
+        max_length=15,
+        description="Clé de la métadonnée à ajouter/modifier."
+    )
+
+    value: str |int = Field(
+            description="Valeur de la métadonnée."
+        )
+
+
 class AnswerResponse(BaseModel):
     """Réponse renvoyée par l'API."""
 

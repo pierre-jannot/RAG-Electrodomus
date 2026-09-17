@@ -5,7 +5,7 @@ Point d'entrée de l'API.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.endpoints import sav, options
+from src.api.endpoints import sav, options, metadata
 
 
 app = FastAPI(
@@ -22,3 +22,4 @@ app.add_middleware(
 
 app.include_router(sav.router)
 app.include_router(options.router)
+app.include_router(metadata.router)
