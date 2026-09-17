@@ -1,0 +1,96 @@
+[
+    {
+        "type": "chunks",
+        "queries": [
+            {
+                "question": "Mon WX-350 affiche un code error E01",
+                "list": [
+                    {
+                        "n_candidates": 30,
+                        "top_k": 5 
+                    },
+                    {
+                        "n_candidates": 10,
+                        "top_k": 5 
+                    },
+                    {
+                        "n_candidates": 30,
+                        "top_k": 3
+                    },
+                    {
+                        "n_candidates": 10,
+                        "top_k": 3
+                    }
+                ]
+            },
+            {
+                "question": "Quelle est la durée de garantie de mon électroménager ?",
+                "list": [
+                    {
+                        "n_candidates": 30,
+                        "top_k": 5 
+                    },
+                    {
+                        "n_candidates": 10,
+                        "top_k": 5 
+                    },
+                    {
+                        "n_candidates": 30,
+                        "top_k": 3
+                    },
+                    {
+                        "n_candidates": 10,
+                        "top_k": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "type": "LLM",
+        "queries": [
+            {
+                "question": "Mon WX-350 affiche un code error E01",
+                "list": [
+                    {
+                        "method": "groq",
+                        "model": "openai/gpt-oss-20b"
+                    },
+                    {
+                        "method": "ollama",
+                        "model": "llama3:8b"
+                    },
+                    {
+                        "method": "ollama",
+                        "model": "ministral-3:latest"
+                    },
+                    {
+                        "method": "ollama",
+                        "model": "Qwen3:14b"
+                    }
+                ]
+            },
+            {
+                "question": "Quelle est la durée de garantie de mon électroménager ?",
+                "list": [
+                    {
+                        "method": "groq",
+                        "model": "openai/gpt-oss-20b"
+                    },
+                    {
+                        "method": "ollama",
+                        "model": "llama3:8b"
+                    },
+                    {
+                        "method": "ollama",
+                        "model": "ministral-3:latest"
+                    },
+                    {
+                        "method": "ollama",
+                        "model": "Qwen3:14b"
+                    }
+                ]
+            }
+        ]
+    }
+]

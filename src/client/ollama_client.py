@@ -4,6 +4,7 @@ Fichier python du client Ollama avec les fonctions d'exécution des modèles.
 
 from dataclasses import dataclass
 import logging
+from pathlib import Path
 
 import ollama
 from ollama import ResponseError
@@ -12,6 +13,7 @@ from src.core.config import load_settings
 
 logger = logging.getLogger(__name__)
 settings = load_settings()
+SYSTEM_PROMPT = Path("src/core/system_prompt.md").read_text(encoding="utf-8")
 
 
 class OllamaConnectionError(Exception):
@@ -36,7 +38,7 @@ class OllamaClient:
     def ask(
             self,
             prompt: str,
-            system: str | None = None,
+            system: str = SYSTEM_PROMPT,
             model: str | None = None,
             think: bool |None = None,
     ) -> str:

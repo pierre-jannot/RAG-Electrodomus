@@ -4,3 +4,4 @@ chroma_db/
 .env
 *.png
 *.drawio
+results.json
