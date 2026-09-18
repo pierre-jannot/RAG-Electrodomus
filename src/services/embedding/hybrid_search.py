@@ -71,7 +71,7 @@ def rerank(chroma_collection, question: str, candidate_ids: list[str], top_k: in
 def hybrid_search(
     question: str,
     where_clause: dict | None = None,
-    n_candidates: int = 5,
+    n_candidates: int = 30,
     top_k: int = 5,
 ) -> list[dict]:
     """
@@ -81,6 +81,6 @@ def hybrid_search(
     dense_ids = dense_search(collection, question, where_clause, n=n_candidates)
     bm25_ids = bm25_search(collection, question, where_clause, n=n_candidates)
 
-    fused_ids = rrf([dense_ids, bm25_ids])[:n_candidates]
+    fused_ids = rrf([dense_ids, bm25_ids])[:top_k]
 
     return rerank(collection, question, fused_ids, top_k=top_k)
