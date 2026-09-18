@@ -89,7 +89,8 @@
     color: var(--panel-text-dim);
   }
 
-  .field select {
+  .field select,
+  .field input {
     background: var(--panel-bg-raised);
     border: 1px solid var(--panel-border);
     color: var(--panel-text);
@@ -101,7 +102,12 @@
     transition: border-color 0.15s ease;
   }
 
-  .field select:focus-visible {
+  .field input {
+    cursor: text;
+  }
+
+  .field select:focus-visible,
+  .field input:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
   }
@@ -384,8 +390,18 @@
       </select>
     </div>
 
+    <div class="field">
+      <label for="apiKeyInput">Clé API</label>
+      <input
+        type="password"
+        id="apiKeyInput"
+        placeholder="Coller la clé ici"
+        autocomplete="off"
+      >
+    </div>
+
     <p class="filters-hint">
-      Le modèle et le code erreur sont facultatifs. Le type d'électroménager est requis pour poser une question. Le code erreur n'est sélectionnable qu'une fois un modèle choisi.
+      Le modèle et le code erreur sont facultatifs. Le type d'électroménager est requis pour poser une question. Le code erreur n'est sélectionnable qu'une fois un modèle choisi. La clé API est facultative.
     </p>
   </aside>
 
@@ -404,15 +420,14 @@
           id="questionInput"
           placeholder="Décris le problème rencontré…"
           rows="1"
-          disabled
         ></textarea>
-        <button class="send-btn" id="sendBtn" disabled aria-label="Envoyer">
+        <button class="send-btn" id="sendBtn" aria-label="Envoyer">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M2 8H14M14 8L9 3M14 8L9 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
       </div>
-      <p class="composer-note">Sélectionne un type d'électroménager pour activer la saisie.</p>
+      <p class="composer-note">Filtres optionnels : sans sélection, la question est posée sans filtre.</p>
     </div>
   </main>
 
@@ -420,6 +435,17 @@
 
 <script>
   const API_BASE = "http://localhost:8000";
+
+  // Clé API : saisie par l'utilisateur dans le champ dédié, uniquement
+  // nécessaire pour la route d'appel SAV (/sav/ask-filtered). Les routes
+  // d'options (types, modèles, codes erreur) restent libres d'accès.
+  // Stockée dans localStorage pour éviter de la ressaisir à chaque
+  // rechargement de la page (reste uniquement dans ce navigateur).
+  const apiKeyInput = document.getElementById("apiKeyInput");
+  apiKeyInput.value = localStorage.getItem("electrodomus_api_key") || "";
+  apiKeyInput.addEventListener("input", () => {
+    localStorage.setItem("electrodomus_api_key", apiKeyInput.value);
+  });
 
   const applianceSelect = document.getElementById("applianceType");
   const modelSelect = document.getElementById("modelId");
@@ -489,16 +515,12 @@
   applianceSelect.addEventListener("change", () => {
     const value = applianceSelect.value;
     if (!value) {
-      questionInput.disabled = true;
-      sendBtn.disabled = true;
-      composerNote.textContent = "Sélectionne un type d'électroménager pour activer la saisie.";
       resetErrorCodes("Choisir un type d'abord");
+      modelSelect.disabled = true;
+      modelSelect.innerHTML = `<option value="">Choisir un type d'abord</option>`;
       return;
     }
     loadModels(value);
-    questionInput.disabled = false;
-    sendBtn.disabled = false;
-    composerNote.textContent = "";
     questionInput.focus();
   });
 
@@ -571,6 +593,8 @@
     const question = questionInput.value.trim();
     if (!question || isWaiting) return;
 
+    const apiKey = apiKeyInput.value.trim();
+
     const applianceType = applianceSelect.value;
     const modelId = modelSelect.value || null;
     const errorCode = errorCodeSelect.value || null;
@@ -584,19 +608,40 @@
     sendBtn.disabled = true;
     addTypingIndicator();
 
-    try {
-      const res = await fetch(`${API_BASE}/sav/ask-filtered`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+    // Header X-API-Key ajouté uniquement si une clé a été renseignée :
+    // la route accepte les deux cas (avec ou sans clé) mais peut adapter
+    // sa réponse selon l'authentification (voir get_optional_api_key côté serveur).
+    const headers = { "Content-Type": "application/json" };
+    if (apiKey) {
+      headers["X-API-Key"] = apiKey;
+    }
+
+    // Aucun filtre renseigné -> question libre (/sav/ask).
+    // Au moins un filtre renseigné -> recherche filtrée (/sav/ask-filtered).
+    const hasFilters = Boolean(applianceType || modelId || errorCode);
+    const endpoint = hasFilters ? "/sav/ask-filtered" : "/sav/ask";
+    const body = hasFilters
+      ? {
           question,
-          appliance_type: applianceType,
+          appliance_type: applianceType || null,
           model_id: modelId,
           error_code: errorCode,
-        }),
+        }
+      : { question };
+
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
       });
 
       removeTypingIndicator();
+
+      if (res.status === 401) {
+        addBubble("assistant", "Clé API invalide ou manquante.", true);
+        return;
+      }
 
       if (!res.ok) {
         const errBody = await res.json().catch(() => null);
