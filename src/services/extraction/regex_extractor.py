@@ -21,7 +21,9 @@ SPACE = r"[\s\xa0]+"
 # Niveau 1 : date complète
 FULL_DATE_PATTERNS = [
     (re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b"), "full_numeric"),
-    (re.compile(rf"\b(\d{{1,2}}){SPACE}({MONTHS_PATTERN}){SPACE}(\d{{4}})\b", re.IGNORECASE), "full_text"),
+    (re.compile(
+        rf"\b(\d{{1,2}}){SPACE}({MONTHS_PATTERN}){SPACE}(\d{{4}})\b", re.IGNORECASE),
+        "full_text"),
 ]
 
 # Niveau 2 : mois/année
@@ -233,19 +235,22 @@ def build_element_clause(element_list: list[str], element_name: str) -> dict | N
     return None
 
 
-def resolve_query_where_clause(question: str) -> dict:
+def resolve_query_where_clause(question: str, api_key: str) -> dict | None:
     """Fonction de construction de la clause de filtrage de la query Chroma."""
     models = extract_specific_models(question)
     if not models:
         normalized_question = text_to_bare_device_type(question)
         models = extract_bare_device_types(normalized_question)
     errors = resolve_errors(question)
+
     models_clause = build_element_clause(models, "models")
     errors_clause = build_element_clause(errors, "errors")
-    if models_clause and errors_clause:
-        return {"$and": [models_clause, errors_clause]}
-    if models_clause:
-        return models_clause
-    if errors_clause:
-        return errors_clause
+    access_clause = {"access": "public"} if not api_key else None
+
+    clauses = [c for c in (models_clause, errors_clause, access_clause) if c]
+
+    if len(clauses) > 1:
+        return {"$and": clauses}
+    if clauses:
+        return clauses[0]
     return None

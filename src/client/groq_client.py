@@ -72,7 +72,7 @@ class GroqClient:
         except GroqError as e:
             logger.error("Erreur API Groq (modèle=%s) : %s", model or self.default_model, e)
             raise GroqRequestError(str(e)) from e
- 
+
         return response.choices[0].message.content
 
 
@@ -80,7 +80,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     try:
         client = GroqClient()
-        reponse = client.ask("Explique en une phrase ce qu'est un RAG (informatique, sur un corpus).")
+        reponse = client.ask(
+            "Explique en une phrase ce qu'est un RAG (informatique, sur un corpus).")
         print(reponse)
     except (GroqConfigError, GroqRequestError) as e:
         print(f"Erreur : {e}")

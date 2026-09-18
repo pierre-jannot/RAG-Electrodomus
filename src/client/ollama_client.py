@@ -4,6 +4,7 @@ Fichier python du client Ollama avec les fonctions d'exécution des modèles.
 
 from dataclasses import dataclass
 import logging
+from pathlib import Path
 
 import ollama
 from ollama import ResponseError
@@ -12,6 +13,7 @@ from src.core.config import load_settings
 
 logger = logging.getLogger(__name__)
 settings = load_settings()
+SYSTEM_PROMPT = Path("src/core/system_prompt.md").read_text(encoding="utf-8")
 
 
 class OllamaConnectionError(Exception):
@@ -36,10 +38,9 @@ class OllamaClient:
     def ask(
             self,
             prompt: str,
-            system: str | None = None,
+            system: str = SYSTEM_PROMPT,
             model: str | None = None,
             think: bool |None = None,
-            stream: bool = False,
     ) -> str:
         """Appel au LLM initialisé sur le client Ollama."""
         messages: list[dict[str, str]] = []
@@ -58,21 +59,22 @@ class OllamaClient:
         except ResponseError as e:
             logger.error("Erreur Ollama (modèle=%s) : %s", model or self.default_model, e)
             raise OllamaModelError(str(e)) from e
-        
+
         except ConnectionError as e:
             logger.error("Impossible de joindre Ollama sur %s : %s", self.host, e)
             raise OllamaConnectionError(
                 f"Serveur Ollama injoignable sur {self.host}. "
                 f"Vérifie qu'il tourne bien (`ollama serve`)."
             ) from e
-        
+
         return response["message"]["content"]
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     client = OllamaClient()
     try:
-        reponse = client.ask("Explique en une phrase ce qu'est un RAG (informatique, sur un corpus).")
+        reponse = client.ask(
+            "Explique en une phrase ce qu'est un RAG (informatique, sur un corpus).")
         print(reponse)
     except (OllamaConnectionError, OllamaModelError) as e:
         print(f"Erreur : {e}")

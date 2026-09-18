@@ -28,6 +28,7 @@ class Settings:
     ollama_model: str
     groq_model: str
     groq_api_key: str
+    fastapi_key: str
 
     def validate_folder(self) -> None:
         """Validation des variables d'environnement au lancement du projet"""
@@ -54,6 +55,7 @@ def load_settings() -> Settings:
     ollama_model = os.getenv("OLLAMA_MODEL", "ministral-3:latest")
     groq_model = os.getenv("GROQ_MODEL", "gpt-oss-20b")
     groq_api_key = os.getenv("GROQ_API_KEY", None)
+    fastapi_key = os.getenv("API_KEY", None)
 
     settings = Settings(
         source_dir=Path(source_dir),
@@ -65,6 +67,7 @@ def load_settings() -> Settings:
         ollama_model=ollama_model,
         groq_model=groq_model,
         groq_api_key=groq_api_key,
+        fastapi_key=fastapi_key,
     )
     settings.validate_folder()
     return settings

@@ -61,6 +61,7 @@ def resolve_chunk_metadata(chunk: DocChunk,
         "headings": chunk.meta.headings,
         "models": models,
         "errors": errors,
+        "access": "private"
         }
 
     return clean_metadata(metadata)

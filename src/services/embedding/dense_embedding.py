@@ -30,9 +30,9 @@ class ChromaDenseEmbeddingFunction(EmbeddingFunction):
         self.device = device
         self.model = SentenceTransformer(model_name, device=device)
 
-    def __call__(self, input: Documents) -> Embeddings:
+    def __call__(self, file_input: Documents) -> Embeddings:
         embeddings = self.model.encode(
-            input,
+            file_input,
             normalize_embeddings=True,
             batch_size=8,
             show_progress_bar=False,
