@@ -4,9 +4,12 @@ Point d'entrée de l'API.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 
 from src.api.endpoints import sav, options, metadata
 
+
+api_key_header = APIKeyHeader(name="X-API-Key")
 
 app = FastAPI(
     title="RAG-Electrodomus API",

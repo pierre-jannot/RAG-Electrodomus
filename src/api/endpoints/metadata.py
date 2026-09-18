@@ -2,13 +2,14 @@
 Routes des modifications des métadonnées des chunks.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from src.api.security import verify_api_key
 from src.api.schemas import MetadataRequest, MetadataFilteredRequest
 from src.database.database_functions import add_metadata_to_all, add_metadata_by_title
 
 
-router = APIRouter(prefix="/metadatas", tags=["metadatas"])
+router = APIRouter(prefix="/metadatas", tags=["metadatas"], dependencies=[Depends(verify_api_key)])
 
 @router.post("/add-metadata")
 def add_metadata(request: MetadataRequest):

@@ -9,12 +9,12 @@ from src.services.call.prompt_service import build_prompt
 from src.utils.dict import get_leaf_strings
 
 client = GroqClient()
-# question = "Je n'arrive plus à fermer la porte de mon lave-linge 350, que dois-je faire ?"
 
-def ask(request: str) -> str:
+
+def ask(request: str, api_key: str | None) -> str:
     """Fonction pour question utilisateur sur le corpus Electrodomus."""
 
-    where_clause = resolve_query_where_clause(request)
+    where_clause = resolve_query_where_clause(request, api_key)
     model_and_error = get_leaf_strings(where_clause)
 
     request = f"{' - '.join(model_and_error)} | {request}"
@@ -31,7 +31,8 @@ def ask_filtered(
         request: str,
         appliance_type: str | None,
         appliance_id: str | None,
-        error_code: str | None):
+        error_code: str | None,
+        api_key: str | None):
     """Fonction d'appel avec paramètres."""
     if appliance_type and appliance_id:
         filter_str = f"{appliance_type}-{appliance_id}"
@@ -45,7 +46,7 @@ def ask_filtered(
     if filter_str:
         request = f"{filter_str} | {request}"
 
-    where_clause = resolve_query_where_clause(filter_str)
+    where_clause = resolve_query_where_clause(filter_str, api_key)
     model_and_error = get_leaf_strings(where_clause)
 
     request = f"{' - '.join(model_and_error)} | {request}"
