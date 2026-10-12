@@ -5,6 +5,7 @@ Wrapper autour de Docling DocumentConverter pour les formats du projet :
 PDF (texte), DOCX, HTML, XLSX.
 """
 
+from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 
@@ -46,13 +47,19 @@ def build_converter() -> DocumentConverter:
     )
 
 
+@lru_cache(maxsize=1)
+def get_converter() -> DocumentConverter:
+    """Fonction de récupération du converteur, avec cache."""
+    return build_converter()
+
+
 def convert_file(path: Path, converter: DocumentConverter | None = None) -> DoclingDocument:
     """
     Convertit un fichier en DoclingDocument, avec un traitement dédié par
     extension quand le pipeline générique de Docling ne suffit pas.
     """
     if converter is None:
-        converter = build_converter()
+        converter = get_converter()
 
     suffix = path.suffix.lower()
 

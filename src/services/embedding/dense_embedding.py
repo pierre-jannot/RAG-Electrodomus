@@ -5,6 +5,7 @@ Permet de donner à Chroma la fonction avec laquelle
 la vectorisation est réalisée.
 """
 
+from functools import lru_cache
 from typing import Any, Dict, Optional
 
 from chromadb import Documents, EmbeddingFunction, Embeddings
@@ -14,6 +15,12 @@ from sentence_transformers import SentenceTransformer
 from src.core.config import load_settings
 
 settings = load_settings()
+
+
+@lru_cache(maxsize=4)
+def _load_model(model_name: str, device: Optional[str]) -> SentenceTransformer:
+    """Chargement du modèle, avec cache"""
+    return SentenceTransformer(model_name, device=device)
 
 
 @register_embedding_function
@@ -28,7 +35,7 @@ class ChromaDenseEmbeddingFunction(EmbeddingFunction):
     ):
         self.model_name = model_name
         self.device = device
-        self.model = SentenceTransformer(model_name, device=device)
+        self.model = _load_model(model_name, device)
 
     def __call__(self, file_input: Documents) -> Embeddings:
         embeddings = self.model.encode(

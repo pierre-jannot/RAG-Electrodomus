@@ -4,6 +4,7 @@ Modèles Pydantic définissant les contrats d'entrée/sortie de l'API.
 
 from enum import Enum
 
+from typing import Any
 from pydantic import BaseModel, Field
 
 
@@ -73,7 +74,7 @@ class MetadataFilteredRequest(BaseModel):
             description="Clé de la métadonnée de filtrage."
     )
 
-    filter_value: str |int = Field(
+    filter_value: Any = Field(
             description="Valeur de la métadonnée de filtrage."
         )
 

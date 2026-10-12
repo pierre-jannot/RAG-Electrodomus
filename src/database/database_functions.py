@@ -11,7 +11,6 @@ import chromadb
 
 from src.core.config import load_settings
 from src.services.embedding.dense_embedding import ChromaDenseEmbeddingFunction
-from src.services.embedding.docling_chunker import chunk_directory
 
 settings = load_settings()
 
@@ -35,14 +34,33 @@ def get_dense_collection(
         )
 
 
+def get_indexed_signatures(collection, batch_size: int = 1000) -> dict[str, set[str]]:
+    """Retourne {path: {signatures présentes dans l'index}}."""
+    indexed: dict[str, set[str]] = {}
+    offset = 0
+    while True:
+        batch = collection.get(include=["metadatas"], limit=batch_size, offset=offset)
+        metadatas = batch["metadatas"] or []
+        if not metadatas:
+            break
+        for meta in metadatas:
+            if meta and "title" in meta and "signature" in meta:
+                indexed.setdefault(meta["title"], set()).add(meta["signature"])
+        offset += batch_size
+    return indexed
+
+
 def ingest_chunks(
     collection: chromadb.Collection,
     chunks_data: list[dict[str, Any]],
     batch_size: int = 100,
+    upsert: bool = False,
 ) -> None:
     """
     chunks_data : liste de dicts {"text": str, "metadata": dict, "id": str (optionnel)}
     """
+    write = collection.upsert if upsert else collection.add
+
     for i in range(0, len(chunks_data), batch_size):
         batch = chunks_data[i : i + batch_size]
 
@@ -50,19 +68,9 @@ def ingest_chunks(
         documents = [item["text"] for item in batch]
         metadatas = [item["metadata"] for item in batch]
 
-        collection.add(ids=ids, documents=documents, metadatas=metadatas)
+        write(ids=ids, documents=documents, metadatas=metadatas)
         print(f"Lot {i // batch_size + 1} inséré : {len(batch)} chunks "
               f"({i + len(batch)}/{len(chunks_data)} au total)")
-
-
-def populate_database():
-    """
-    Fonction permettant la récupération des documents,
-    leur chunking et ajout dans la base de données.
-    """
-    collection = get_dense_collection()
-    chunks_data = chunk_directory()
-    ingest_chunks(collection=collection, chunks_data=chunks_data)
 
 
 def add_metadata_to_all(key: str, value, batch_size: int = 500) -> int:
