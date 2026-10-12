@@ -2,6 +2,7 @@
 Fonctions utilitaires concernant les fichiers.
 """
 
+import hashlib
 from pathlib import Path
 
 def list_files(folder: Path) -> list[Path]:
@@ -24,3 +25,12 @@ def get_path_after(filepath: Path, target_folder: str) -> str | None:
         if idx + 1 < len(parts):
             return parts[idx + 1:]
     return None
+
+
+def compute_signature(filepath: Path) -> str:
+    """Fonction de production de la signature d'un fichier."""
+    h = hashlib.sha256()
+    with filepath.open("rb") as f:
+        for block in iter(lambda: f.read(1024*1024), b""):
+            h.update(block)
+    return h.hexdigest()
