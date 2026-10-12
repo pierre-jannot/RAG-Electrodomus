@@ -37,7 +37,7 @@ def synchronize_database(
     chunker = get_chunker()
 
     for file in list_files(root):
-        title = get_path_after(file, "Documentation_Electrodomus")[-1]
+        title = get_path_after(file, settings.dir_name)[-1]
         seen_files.add(title)
         signature = compute_signature(file)
         known = indexed.get(title)

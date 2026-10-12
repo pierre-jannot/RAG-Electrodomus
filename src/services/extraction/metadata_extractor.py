@@ -41,7 +41,7 @@ def resolve_metadata(text: str, path: list[str]) -> dict:
     date = resolve_date(text)
     models = resolve_models(text, path)
     errors = resolve_errors(text)
-    rel_path = Path(f"{settings.source_dir}/Documentation_Electrodomus/{'/'.join(path)}")
+    rel_path = Path(f"{settings.source_dir}/{settings.dir_name}/{'/'.join(path)}")
     signature = compute_signature(rel_path)
 
     return {

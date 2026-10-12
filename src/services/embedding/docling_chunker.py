@@ -54,7 +54,7 @@ def chunk_document(chunker: HybridChunker, converter: DocumentConverter, file: P
     en chunks.
     """
     document = convert_file(file, converter=converter)
-    path = get_path_after(file, "Documentation_Electrodomus")
+    path = get_path_after(file, settings.dir_name)
     document_text = document.export_to_markdown()
     metadata = resolve_metadata(document_text, path)
     raw_chunks = list(chunker.chunk(dl_doc=document))

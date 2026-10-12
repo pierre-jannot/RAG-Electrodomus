@@ -21,6 +21,7 @@ class Settings:
     """
     source_dir: Path
     db_dir: Path
+    dir_name: str
     collection_name: str
     max_tokens: int
     min_tokens: int
@@ -48,6 +49,7 @@ def load_settings() -> Settings:
     """
     source_dir = os.getenv("RAG_SOURCE_DIR", "data/corpus")
     db_dir = os.getenv("DATABASE_PATH", "./chroma_db")
+    dir_name = os.getenv("DIR_NAME", "Documentation_Electrodomus")
     collection_name = os.getenv("COLLECTION_NAME", "rag_electrodomus")
     max_tokens = os.getenv("MAX_TOKENS", "512")
     min_tokens = os.getenv("MIN_TOKENS", "200")
@@ -60,6 +62,7 @@ def load_settings() -> Settings:
     settings = Settings(
         source_dir=Path(source_dir),
         db_dir=Path(db_dir),
+        dir_name=dir_name,
         collection_name=collection_name,
         max_tokens=max_tokens,
         min_tokens=min_tokens,
