@@ -2,8 +2,6 @@
 Script des fonctions d'hybrid search.
 """
 
-import json
-
 from sentence_transformers import CrossEncoder
 
 from src.core.config import load_settings
@@ -73,12 +71,6 @@ def hybrid_search(
 
     dense_ids = dense_search(collection, question, where_clause, n=n_candidates)
     bm25_ids = bm25_search(collection, question, where_clause, n=n_candidates)
-
-    with open("dense_output.json", "w") as file:
-        json.dump(dense_ids, file, indent=4)
-
-    with open("bm25_output.json", "w") as file:
-        json.dump(bm25_ids, file, indent=4)
 
     fused_ids = rrf([dense_ids, bm25_ids])[:rff_candidates]
 
