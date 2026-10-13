@@ -130,6 +130,55 @@
     margin-top: auto;
   }
 
+  .key-actions { display: flex; gap: 8px; }
+
+  .panel-btn {
+    background: var(--panel-bg-raised);
+    border: 1px solid var(--panel-border);
+    color: var(--panel-text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .panel-btn:hover:not(:disabled) { border-color: var(--accent); }
+  .panel-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .panel-btn[hidden], .admin-actions[hidden] { display: none; }
+
+  .key-status { margin: 0; font-size: 12px; color: var(--panel-text-dim); min-height: 1em; }
+  .key-status.ok { color: #6FBF73; }
+  .key-status.ko { color: #E07A68; }
+
+  .admin-result {
+    background: var(--panel-bg-raised);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+  }
+  .admin-result[hidden] { display: none; }
+
+  .admin-result .result-title {
+    font-weight: 600;
+    color: #F0EEEA;
+    margin-bottom: 8px;
+  }
+
+  .admin-result .result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    color: var(--panel-text-dim);
+  }
+
+  .admin-result .result-row strong {
+    color: var(--panel-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-result .result-row.highlight strong { color: var(--accent); }
+
   /* --- Zone de chat --- */
   .chat-area {
     display: flex;
@@ -201,6 +250,22 @@
     border: 1px solid var(--chat-border);
     border-bottom-left-radius: 4px;
     white-space: normal;
+  }
+
+  .bubble-row.assistant .bubble a.sav-btn {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 14px;
+    background: var(--accent);
+    color: #241804;
+    font-weight: 600;
+    font-size: 13.5px;
+    text-decoration: none;
+    border-radius: 8px;
+  }
+
+  .bubble-row.assistant .bubble a.sav-btn:hover {
+    background: #F0B355;
   }
 
   /* Éléments Markdown rendus (uniquement dans les bulles assistant) */
@@ -390,7 +455,7 @@
       </select>
     </div>
 
-    <div class="field">
+        <div class="field">
       <label for="apiKeyInput">Clé API</label>
       <input
         type="password"
@@ -398,6 +463,19 @@
         placeholder="Coller la clé ici"
         autocomplete="off"
       >
+      <div class="key-actions">
+        <button type="button" class="panel-btn" id="validateKeyBtn">Valider</button>
+        <button type="button" class="panel-btn" id="resetKeyBtn" hidden>Réinitialiser</button>
+      </div>
+      <p class="key-status" id="keyStatus" aria-live="polite"></p>
+    </div>
+
+    <div class="field admin-actions" id="adminActions" hidden>
+      <label>Administration de la base</label>
+      <button type="button" class="panel-btn" id="initDbBtn">Initialiser la base</button>
+      <button type="button" class="panel-btn" id="syncDbBtn">Mettre à jour la base</button>
+      <p class="key-status" id="adminStatus" aria-live="polite"></p>
+      <div class="admin-result" id="adminResult" hidden></div>
     </div>
 
     <p class="filters-hint">
@@ -441,11 +519,165 @@
   // d'options (types, modèles, codes erreur) restent libres d'accès.
   // Stockée dans localStorage pour éviter de la ressaisir à chaque
   // rechargement de la page (reste uniquement dans ce navigateur).
-  const apiKeyInput = document.getElementById("apiKeyInput");
-  apiKeyInput.value = localStorage.getItem("electrodomus_api_key") || "";
-  apiKeyInput.addEventListener("input", () => {
-    localStorage.setItem("electrodomus_api_key", apiKeyInput.value);
+    const apiKeyInput = document.getElementById("apiKeyInput");
+  const validateKeyBtn = document.getElementById("validateKeyBtn");
+  const resetKeyBtn = document.getElementById("resetKeyBtn");
+  const keyStatus = document.getElementById("keyStatus");
+  const adminActions = document.getElementById("adminActions");
+  const initDbBtn = document.getElementById("initDbBtn");
+  const syncDbBtn = document.getElementById("syncDbBtn");
+  const adminStatus = document.getElementById("adminStatus");
+
+  const KEY_STORAGE = "electrodomus_api_key";
+  let apiKeyValid = false;
+
+  function authHeaders() {
+    return apiKeyValid ? { "X-API-Key": apiKeyInput.value.trim() } : {};
+  }
+
+  function setStatus(el, message, kind = "") {
+    el.textContent = message;
+    el.className = "key-status" + (kind ? " " + kind : "");
+  }
+
+  function refreshOptions() {
+    loadApplianceTypes();
+    modelSelect.disabled = true;
+    modelSelect.innerHTML = `<option value="">Choisir un type d'abord</option>`;
+    resetErrorCodes("Choisir un type d'abord");
+  }
+
+  function setKeyValid(valid) {
+    apiKeyValid = valid;
+    apiKeyInput.readOnly = valid;
+    validateKeyBtn.hidden = valid;
+    resetKeyBtn.hidden = !valid;
+    adminActions.hidden = !valid;
+    setStatus(adminStatus, "");
+    adminResult.hidden = true;
+    refreshOptions();
+  }
+
+  async function validateApiKey() {
+    const key = apiKeyInput.value.trim();
+    if (!key) {
+      setStatus(keyStatus, "Saisis une clé avant de valider.", "ko");
+      return;
+    }
+    validateKeyBtn.disabled = true;
+    setStatus(keyStatus, "Vérification…");
+    try {
+      const res = await fetch(`${API_BASE}/auth/check`, { headers: { "X-API-Key": key } });
+      if (res.ok) {
+        try { localStorage.setItem(KEY_STORAGE, key); } catch {}
+        setKeyValid(true);
+        setStatus(keyStatus, "Clé valide.", "ok");
+      } else {
+        setKeyValid(false);
+        setStatus(keyStatus, "Clé invalide.", "ko");
+      }
+    } catch (err) {
+      setStatus(keyStatus, "Impossible de joindre le serveur.", "ko");
+      console.error(err);
+    } finally {
+      validateKeyBtn.disabled = false;
+    }
+  }
+
+  function resetApiKey() {
+    try { localStorage.removeItem(KEY_STORAGE); } catch {}
+    apiKeyInput.value = "";
+    setKeyValid(false);
+    setStatus(keyStatus, "");
+    apiKeyInput.focus();
+  }
+
+  const RESULT_LABELS = {
+    added: "Documents ajoutés",
+    updated: "Documents mis à jour",
+    unchanged: "Documents inchangés",
+    deleted: "Documents supprimés",
+    chunks: "Chunks indexés",
+  };
+
+  const adminResult = document.getElementById("adminResult");
+
+  function renderAdminResult(body) {
+    adminResult.replaceChildren();
+
+    const entries = Object.entries(body || {}).filter(
+      ([, v]) => typeof v === "number"
+    );
+
+    // Réponse sans statistiques (ex. {"result": "OK"}) : pas de détail à afficher
+    if (entries.length === 0) {
+      adminResult.hidden = true;
+      return;
+    }
+
+    const changes = (body.added || 0) + (body.updated || 0) + (body.deleted || 0);
+    const title = document.createElement("div");
+    title.className = "result-title";
+    title.textContent = changes === 0 && "unchanged" in body
+      ? "La base était déjà à jour"
+      : "Résumé de l'opération";
+    adminResult.appendChild(title);
+
+    for (const [key, value] of entries) {
+      const row = document.createElement("div");
+      row.className = "result-row" + (value > 0 && key !== "unchanged" ? " highlight" : "");
+
+      const label = document.createElement("span");
+      label.textContent = RESULT_LABELS[key] || key;
+
+      const count = document.createElement("strong");
+      count.textContent = value;
+
+      row.append(label, count);
+      adminResult.appendChild(row);
+    }
+    adminResult.hidden = false;
+  }
+
+  async function runAdminAction(path, confirmMessage) {
+    if (confirmMessage && !window.confirm(confirmMessage)) return;
+    adminResult.hidden = true;
+
+    initDbBtn.disabled = syncDbBtn.disabled = true;
+    setStatus(adminStatus, "Opération en cours, cela peut prendre plusieurs minutes…");
+    try {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: "GET",   // passez en "POST" si vous changez vos routes en @router.post
+        headers: { "X-API-Key": apiKeyInput.value.trim() },
+      });
+      const body = await res.json().catch(() => null);
+
+      if (res.status === 401 || res.status === 403) {
+        setKeyValid(false);
+        setStatus(keyStatus, "La clé n'est plus valide.", "ko");
+      } else if (!res.ok) {
+        setStatus(adminStatus, body?.detail || "Une erreur est survenue.", "ko");
+      } else {
+        setStatus(adminStatus, "Opération terminée.", "ok");
+        renderAdminResult(body);
+      }
+    } catch (err) {
+      setStatus(adminStatus, "Impossible de joindre le serveur.", "ko");
+      console.error(err);
+    } finally {
+      initDbBtn.disabled = syncDbBtn.disabled = false;
+    }
+  }
+
+  validateKeyBtn.addEventListener("click", validateApiKey);
+  resetKeyBtn.addEventListener("click", resetApiKey);
+  apiKeyInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); validateApiKey(); }
   });
+  initDbBtn.addEventListener("click", () =>
+    runAdminAction("/database/initialize",
+      "Cette action supprime la base actuelle et la reconstruit entièrement. Continuer ?"));
+  syncDbBtn.addEventListener("click", () => runAdminAction("/database/synchronize"));
 
   const applianceSelect = document.getElementById("applianceType");
   const modelSelect = document.getElementById("modelId");
@@ -478,7 +710,7 @@
     resetErrorCodes("Choisir un modèle d'abord");
 
     try {
-      const res = await fetch(`${API_BASE}/options/${applianceType}/models`);
+      const res = await fetch(`${API_BASE}/options/${applianceType}/models`, { headers: authHeaders() });
       const models = res.ok ? await res.json() : [];
 
       modelSelect.innerHTML = `<option value="">Aucun</option>` +
@@ -495,7 +727,7 @@
     errorCodeSelect.innerHTML = `<option value="">Chargement…</option>`;
 
     try {
-      const res = await fetch(`${API_BASE}/options/${applianceType}/${modelId}/error-codes`);
+      const res = await fetch(`${API_BASE}/options/${applianceType}/${modelId}/error-codes`, { headers: authHeaders() });
       const codes = res.ok ? await res.json() : [];
 
       errorCodeSelect.innerHTML = `<option value="">Aucun</option>` +
@@ -548,7 +780,7 @@
 
   sendBtn.addEventListener("click", sendQuestion);
 
-  function addBubble(role, text, isError = false) {
+  function addBubble(role, text, isError = false, showSavButton = false) {
     if (emptyState) emptyState.remove();
 
     const row = document.createElement("div");
@@ -561,6 +793,14 @@
       bubble.innerHTML = marked.parse(text);
     } else {
       bubble.textContent = text;
+    }
+
+    if (showSavButton) {
+      const btn = document.createElement("a");
+      btn.className = "sav-btn";
+      btn.textContent = "Contacter le SAV";
+      btn.href = "mailto:sav@electrodomus.fr";
+      bubble.appendChild(btn);
     }
 
     row.appendChild(bubble);
@@ -593,7 +833,7 @@
     const question = questionInput.value.trim();
     if (!question || isWaiting) return;
 
-    const apiKey = apiKeyInput.value.trim();
+    const apiKey = apiKeyValid ? apiKeyInput.value.trim() : "";
 
     const applianceType = applianceSelect.value;
     const modelId = modelSelect.value || null;
@@ -638,7 +878,7 @@
 
       removeTypingIndicator();
 
-      if (res.status === 401) {
+      if (res.status === 401 || res.status === 403) {
         addBubble("assistant", "Clé API invalide ou manquante.", true);
         return;
       }
@@ -649,7 +889,7 @@
         addBubble("assistant", detail, true);
       } else {
         const data = await res.json();
-        addBubble("assistant", data.answer);
+        addBubble("assistant", data.answer, false, data.contact_sav);
       }
     } catch (err) {
       removeTypingIndicator();
@@ -663,7 +903,9 @@
     }
   }
 
-  loadApplianceTypes();
+  // Au chargement : si une clé est mémorisée, on la revalide automatiquement
+  try { apiKeyInput.value = localStorage.getItem(KEY_STORAGE) || ""; } catch {}
+  if (apiKeyInput.value) validateApiKey();
 </script>
 
 </body>
