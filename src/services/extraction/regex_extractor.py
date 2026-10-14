@@ -41,9 +41,9 @@ DATE_TIERS = [FULL_DATE_PATTERNS, MONTH_YEAR_PATTERNS, YEAR_PATTERNS]
 
 SEP = r"[-‐‑–\s\u00a0\u202f]?"   # - ‐ ‑ – espace, espace insécable, fine insécable
 
-MODEL_PATTERN = re.compile(rf"\b((?:FR|WX|LV){SEP}\d{{3,4}})\b")
+MODEL_PATTERN = re.compile(rf"\b(FR|WX|LV){SEP}(\d{{3,4}})\b")
 
-DEVICE_TYPE_PATTERN = re.compile(rf"\b(FR|WX|LV)\b(?!-\d)")
+DEVICE_TYPE_PATTERN = re.compile(rf"\b(FR|WX|LV)\b(?!{SEP}\d)")
 
 SECTION_PATTERN = re.compile(
     r"Mod[eè]les?\s+concern[ée]s?\s*:?\s*\n?(.*?)(?:\n\s*\n|\n#{1,6}\s|\Z)",
@@ -56,18 +56,16 @@ ERROR_CODE_PATTERN = re.compile(r"\bE\d{2}\b")
 
 
 def text_to_bare_device_type(text: str) -> str:
-    """Remplace les occurences de noms d'électroménager
-    par leur type."""
-    text = text.lower()
-    text = re.sub(r"\blave[\s-]linges?\b", "WX", text)
-    text = re.sub(r"\blave[\s-]vaisselles?\b", "LV", text)
-    text = re.sub(r"\bfours?(?:\s+encastrables?)?\b", "FR", text)
+    """Remplace les noms d'électroménager par leur code de type."""
+    text = re.sub(r"\blave[\s\-‐‑–]+linges?\b", "WX", text, flags=re.IGNORECASE)
+    text = re.sub(r"\blave[\s\-‐‑–]+vaisselles?\b", "LV", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bfours?\b", "FR", text, flags=re.IGNORECASE)
     return text
 
 
 def extract_specific_models(text: str) -> list[str]:
     """Modèles précis mentionnés, ex: ['LV-451', 'LV-452']."""
-    return sorted(set(MODEL_PATTERN.findall(text)))
+    return sorted({f"{device}-{number}" for device, number in MODEL_PATTERN.findall(text)})
 
 
 def extract_bare_device_types(text: str) -> list[str]:
@@ -239,9 +237,9 @@ def build_element_clause(element_list: list[str], element_name: str) -> dict | N
 
 def resolve_query_where_clause(question: str, api_key: str | None) -> dict | None:
     """Fonction de construction de la clause de filtrage de la query Chroma."""
-    models = extract_specific_models(question)
+    normalized_question = text_to_bare_device_type(question)
+    models = extract_specific_models(normalized_question)
     if not models:
-        normalized_question = text_to_bare_device_type(question)
         models = extract_bare_device_types(normalized_question)
     errors = resolve_errors(question)
 

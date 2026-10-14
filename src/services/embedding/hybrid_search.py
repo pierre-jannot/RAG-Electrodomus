@@ -67,7 +67,6 @@ def hybrid_search(
     """
     Fonction d'exécution de l'hybrid search.
     """
-
     dense_ids = dense_search(collection, question, where_clause, n=n_candidates)
     bm25_ids = bm25_search(collection, question, where_clause, n=n_candidates)
 
