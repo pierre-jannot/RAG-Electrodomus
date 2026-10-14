@@ -120,6 +120,20 @@ def add_metadata_by_title(filter_key: str, filter_value, key: str, value, batch_
         )
 
 
+PRESERVED_KEYS = ("access",)
+
+
+def get_existing_metadatas(collection, title: str) -> dict:
+    """Lit les métadonnées à conserver sur les chunks actuels d'un document."""
+    result = collection.get(where={"title": title}, include=["metadatas"])
+    preserved: dict = {}
+    for meta in result["metadatas"] or []:
+        for key in PRESERVED_KEYS:
+            if meta and key in meta and key not in preserved:
+                preserved[key] = meta[key]
+    return preserved
+
+
 def fetch_candidates(candidate_ids: list[str]) -> list[dict]:
     """Récupère texte et métadonnées des candidats, dans l'ordre de candidate_ids."""
     if not candidate_ids:
