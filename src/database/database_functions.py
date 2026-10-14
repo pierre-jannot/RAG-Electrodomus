@@ -118,3 +118,40 @@ def add_metadata_by_title(filter_key: str, filter_value, key: str, value, batch_
             ids=ids[i:i + batch_size],
             metadatas=metadatas[i:i + batch_size],
         )
+
+
+PRESERVED_KEYS = ("access",)
+
+
+def get_existing_metadatas(collection, title: str) -> dict:
+    """Lit les métadonnées à conserver sur les chunks actuels d'un document."""
+    result = collection.get(where={"title": title}, include=["metadatas"])
+    preserved: dict = {}
+    for meta in result["metadatas"] or []:
+        for key in PRESERVED_KEYS:
+            if meta and key in meta and key not in preserved:
+                preserved[key] = meta[key]
+    return preserved
+
+
+def fetch_candidates(candidate_ids: list[str]) -> list[dict]:
+    """Récupère texte et métadonnées des candidats, dans l'ordre de candidate_ids."""
+    if not candidate_ids:
+        return []
+
+    chroma_collection = get_dense_collection()
+
+    data = chroma_collection.get(ids=candidate_ids, include=["documents", "metadatas"])
+    id_to_doc = dict(zip(data["ids"], data["documents"]))
+    id_to_meta = dict(zip(data["ids"], data["metadatas"]))
+
+    return [
+        {
+            "id": doc_id,
+            "score": None,
+            "text": id_to_doc[doc_id],
+            "metadata": id_to_meta[doc_id],
+        }
+        for doc_id in candidate_ids
+        if doc_id in id_to_doc   # ignore un ID disparu entre-temps
+    ]

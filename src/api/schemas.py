@@ -12,8 +12,8 @@ class ApplianceType(str, Enum):
     """Types d'électroménager reconnus pour le filtrage explicite."""
 
     LV = "LV"  # Lave-vaisselle
-    WX = "WX"  # Lave-linge (à ajuster si le libellé réel diffère)
-    FR = "FR"  # Réfrigérateur (à ajuster si le libellé réel diffère)
+    WX = "WX"  # Lave-linge
+    FR = "FR"  # Four
 
 
 class QuestionRequest(BaseModel):
@@ -94,3 +94,4 @@ class AnswerResponse(BaseModel):
     """Réponse renvoyée par l'API."""
 
     answer: str
+    contact_sav: bool = False

@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 
-from src.api.endpoints import sav, options, metadata, database
+from src.api.endpoints import authentification, sav, options, metadata, database
 
 
 api_key_header = APIKeyHeader(name="X-API-Key")
@@ -23,6 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(authentification.router)
 app.include_router(sav.router)
 app.include_router(options.router)
 app.include_router(metadata.router)

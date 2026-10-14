@@ -68,13 +68,3 @@ class OllamaClient:
             ) from e
 
         return response["message"]["content"]
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    client = OllamaClient()
-    try:
-        reponse = client.ask(
-            "Explique en une phrase ce qu'est un RAG (informatique, sur un corpus).")
-        print(reponse)
-    except (OllamaConnectionError, OllamaModelError) as e:
-        print(f"Erreur : {e}")

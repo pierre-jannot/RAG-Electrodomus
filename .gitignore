@@ -5,3 +5,4 @@ chroma_db/
 *.png
 *.drawio
 results.json
+test.py

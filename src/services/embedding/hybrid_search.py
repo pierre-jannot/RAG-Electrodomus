@@ -4,10 +4,12 @@ Script des fonctions d'hybrid search.
 
 from sentence_transformers import CrossEncoder
 
-from src.database.database_functions import get_dense_collection
+from src.core.config import load_settings
+from src.database.database_functions import get_dense_collection, fetch_candidates
 from src.services.embedding.bm25_embedding import build_bm25_index, bm25_tokenize
 
 
+settings = load_settings()
 _reranker = CrossEncoder("BAAI/bge-reranker-v2-m3", max_length=512)
 
 collection = get_dense_collection()
@@ -43,36 +45,25 @@ def bm25_search(chroma_collection, question: str, where_clause: dict | None, n: 
     return [ids[i] for i in results[0]]
 
 
-def rerank(chroma_collection, question: str, candidate_ids: list[str], top_k: int) -> list[dict]:
-    """Reranking cross-encoder sur les candidats sortants du premier reranking"""
-    if not candidate_ids:
+def rerank(question: str, candidates: list[dict], top_k: int) -> list[dict]:
+    """Reranking cross-encoder sur des candidats déjà récupérés."""
+    if not candidates:
         return []
 
-    candidates = chroma_collection.get(ids=candidate_ids, include=["documents", "metadatas"])
-    id_to_doc = dict(zip(candidates["ids"], candidates["documents"]))
-    id_to_meta = dict(zip(candidates["ids"], candidates["metadatas"]))
-
-    pairs = [[question, id_to_doc[doc_id]] for doc_id in candidate_ids]
+    pairs = [[question, c["text"]] for c in candidates]
     scores = _reranker.predict(pairs)
 
-    ranked = sorted(zip(candidate_ids, scores), key=lambda x: -x[1])[:top_k]
-
-    return [
-        {
-            "id": doc_id,
-            "score": float(score),
-            "text": id_to_doc[doc_id],
-            "metadata": id_to_meta[doc_id],
-        }
-        for doc_id, score in ranked
-    ]
+    ranked = sorted(zip(candidates, scores), key=lambda x: -x[1])[:top_k]
+    return [{**c, "score": float(score)} for c, score in ranked]
 
 
 def hybrid_search(
     question: str,
     where_clause: dict | None = None,
-    n_candidates: int = 30,
-    top_k: int = 5,
+    n_candidates: int = settings.n_candidates,
+    rff_candidates: int = settings.rrf_candidates,
+    rerank_candidates: int = settings.rerank_candidates,
+    cross_encode: bool = settings.cross_encode,
 ) -> list[dict]:
     """
     Fonction d'exécution de l'hybrid search.
@@ -81,6 +72,10 @@ def hybrid_search(
     dense_ids = dense_search(collection, question, where_clause, n=n_candidates)
     bm25_ids = bm25_search(collection, question, where_clause, n=n_candidates)
 
-    fused_ids = rrf([dense_ids, bm25_ids])[:top_k]
+    fused_ids = rrf([dense_ids, bm25_ids])[:rff_candidates]
 
-    return rerank(collection, question, fused_ids, top_k=top_k)
+    if cross_encode:
+        candidates = fetch_candidates(fused_ids)
+        return rerank(question, candidates, top_k=rerank_candidates)
+
+    return fetch_candidates(fused_ids[:rerank_candidates])

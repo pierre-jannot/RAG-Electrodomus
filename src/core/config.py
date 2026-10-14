@@ -13,6 +13,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def env_bool(name: str, default: bool = False) -> bool:
+        value = os.getenv(name)
+        if value is None:
+            return default
+        return value.strip().lower() in ("1", "true", "yes", "on")
+
+
 @dataclass(frozen=True)
 class Settings:
     """
@@ -30,6 +37,10 @@ class Settings:
     groq_model: str
     groq_api_key: str
     fastapi_key: str
+    n_candidates: int
+    rrf_candidates: int
+    rerank_candidates: int
+    cross_encode: bool
 
     def validate_folder(self) -> None:
         """Validation des variables d'environnement au lancement du projet"""
@@ -58,6 +69,10 @@ def load_settings() -> Settings:
     groq_model = os.getenv("GROQ_MODEL", "gpt-oss-20b")
     groq_api_key = os.getenv("GROQ_API_KEY", None)
     fastapi_key = os.getenv("API_KEY", None)
+    n_candidates = int(os.getenv("N_CANDIDATES", 100))
+    rrf_candidates = int(os.getenv("RRF_CANDIDATES", 20))
+    rerank_candidates = int(os.getenv("RERANK_CANDIDATES", 10))
+    cross_encode = env_bool(os.getenv("CROSS_ENCODE", False))
 
     settings = Settings(
         source_dir=Path(source_dir),
@@ -71,6 +86,10 @@ def load_settings() -> Settings:
         groq_model=groq_model,
         groq_api_key=groq_api_key,
         fastapi_key=fastapi_key,
+        n_candidates=n_candidates,
+        rrf_candidates=rrf_candidates,
+        rerank_candidates=rerank_candidates,
+        cross_encode=cross_encode
     )
     settings.validate_folder()
     return settings

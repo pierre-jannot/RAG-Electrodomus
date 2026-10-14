@@ -254,3 +254,9 @@ def resolve_query_where_clause(question: str, api_key: str) -> dict | None:
     if clauses:
         return clauses[0]
     return None
+
+
+def split_sav_marker(raw_answer: str) -> tuple[str, bool]:
+    """Retire la balise du texte et indique si le SAV est recommandé."""
+    needs_sav = "[[CONTACT_SAV]]" in raw_answer
+    return raw_answer.replace("[[CONTACT_SAV]]", "").strip(), needs_sav

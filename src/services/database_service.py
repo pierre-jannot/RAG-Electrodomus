@@ -47,7 +47,14 @@ def synchronize_database(
             continue
         stats["added" if known is None else "updated"] += 1
 
+        preserved = db.get_existing_metadatas(collection, title) if known else {}
+
         chunks = chunk_document(chunker, converter, file)
+
+        for chunk in chunks:
+            chunk["metadata"]["signature"] = signature
+            chunk["metadata"].update(preserved)
+
         db.ingest_chunks(collection, chunks, upsert=True)
 
         if known:

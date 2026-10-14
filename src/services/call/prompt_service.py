@@ -10,7 +10,9 @@ def build_rag_answer(rag_results: list[dict]) -> str:
     rag_prompt = ""
 
     for rank, item in enumerate(rag_results, start=1):
-        rag_prompt += f"--- Rang : {rank} (score reranker={item['score']:.4f}) ---\n"
+        score = item.get("score")
+        score_text = f" (score reranker={score:.4f})" if score is not None else ""
+        rag_prompt += f"--- Rang : {rank}{score_text} ---\n"
         rag_prompt += f"Titre : {item['metadata'].get('title')}\n"
         rag_prompt += f"Date de modification : {item['metadata'].get('date')}\n"
         rag_prompt += f"Headings : {item['metadata'].get('headings')}\n"
