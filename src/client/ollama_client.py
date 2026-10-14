@@ -7,12 +7,11 @@ import logging
 from pathlib import Path
 
 import ollama
-from ollama import ResponseError
 
-from src.core.config import load_settings
+from src.core.config import load_llm_settings
 
 logger = logging.getLogger(__name__)
-settings = load_settings()
+llm_settings = load_llm_settings()
 SYSTEM_PROMPT = Path("src/core/system_prompt.md").read_text(encoding="utf-8")
 
 
@@ -29,7 +28,7 @@ class OllamaClient:
     """Classe du client Ollama, avec ses fonctions utilitaires d'appel."""
 
     host: str = "http://localhost:11434"
-    default_model: str = settings.ollama_model
+    default_model: str = llm_settings.ollama_model
     default_think: bool = False
 
     def __post_init__(self) -> None:
@@ -56,7 +55,7 @@ class OllamaClient:
                 stream=False,
             )
 
-        except ResponseError as e:
+        except ollama.ResponseError as e:
             logger.error("Erreur Ollama (modèle=%s) : %s", model or self.default_model, e)
             raise OllamaModelError(str(e)) from e
 

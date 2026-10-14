@@ -4,12 +4,12 @@ Script des fonctions d'hybrid search.
 
 from sentence_transformers import CrossEncoder
 
-from src.core.config import load_settings
+from src.core.config import load_search_settings
 from src.database.database_functions import get_dense_collection, fetch_candidates
 from src.services.embedding.bm25_embedding import build_bm25_index, bm25_tokenize
 
 
-settings = load_settings()
+search_settings = load_search_settings()
 _reranker = CrossEncoder("BAAI/bge-reranker-v2-m3", max_length=512)
 
 collection = get_dense_collection()
@@ -60,10 +60,9 @@ def rerank(question: str, candidates: list[dict], top_k: int) -> list[dict]:
 def hybrid_search(
     question: str,
     where_clause: dict | None = None,
-    n_candidates: int = settings.n_candidates,
-    rff_candidates: int = settings.rrf_candidates,
-    rerank_candidates: int = settings.rerank_candidates,
-    cross_encode: bool = settings.cross_encode,
+    n_candidates: int = search_settings.n_candidates,
+    rrf_candidates: int = search_settings.rrf_candidates,
+    final_candidates: int = search_settings.final_candidates,
 ) -> list[dict]:
     """
     Fonction d'exécution de l'hybrid search.
@@ -72,10 +71,12 @@ def hybrid_search(
     dense_ids = dense_search(collection, question, where_clause, n=n_candidates)
     bm25_ids = bm25_search(collection, question, where_clause, n=n_candidates)
 
-    fused_ids = rrf([dense_ids, bm25_ids])[:rff_candidates]
+    fused_ids = rrf([dense_ids, bm25_ids])[:rrf_candidates]
 
-    if cross_encode:
+    if search_settings.cross_encoding:
         candidates = fetch_candidates(fused_ids)
-        return rerank(question, candidates, top_k=rerank_candidates)
+        return rerank(question, candidates, top_k=final_candidates)
 
-    return fetch_candidates(fused_ids[:rerank_candidates])
+    candidates = fetch_candidates(fused_ids[:final_candidates])
+
+    return candidates

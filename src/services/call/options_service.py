@@ -5,8 +5,6 @@ afin de changer dynamiquement les valeurs sélectionnables par
 l'utilisateur de l'interface SAV.
 """
 
-from functools import lru_cache
-
 from src.api.schemas import ApplianceType
 from src.services.embedding.hybrid_search import get_dense_collection
 from src.utils.list import as_list

@@ -3,9 +3,9 @@ Script Python des fonctions service d'appel utilisateur.
 """
 
 from src.client.groq_client import GroqClient
+from src.services.call.prompt_service import build_prompt
 from src.services.embedding.hybrid_search import hybrid_search
 from src.services.extraction.regex_extractor import resolve_query_where_clause
-from src.services.call.prompt_service import build_prompt
 from src.utils.dict import get_leaf_strings
 
 client = GroqClient()

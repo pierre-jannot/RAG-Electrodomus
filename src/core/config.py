@@ -6,44 +6,28 @@ Script de lecture des variables d'environnement
 
 import os
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
-
 from dotenv import load_dotenv
+
+from src.utils.var_type import str_to_bool
 
 load_dotenv()
 
 
-def env_bool(name: str, default: bool = False) -> bool:
-        value = os.getenv(name)
-        if value is None:
-            return default
-        return value.strip().lower() in ("1", "true", "yes", "on")
+# --------------------------------------------------------------------------
+# Groupes de paramètres
+# --------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
-class Settings:
-    """
-    Classe Settings contenant les variables d'environnement
-    et des fonctions utilitaires.
-    """
+class PathSettings:
+    """Classe des paramètres de chemin."""
     source_dir: Path
-    db_dir: Path
     dir_name: str
-    collection_name: str
-    max_tokens: int
-    min_tokens: int
-    embed_model: str
-    ollama_model: str
-    groq_model: str
-    groq_api_key: str
-    fastapi_key: str
-    n_candidates: int
-    rrf_candidates: int
-    rerank_candidates: int
-    cross_encode: bool
 
-    def validate_folder(self) -> None:
-        """Validation des variables d'environnement au lancement du projet"""
+    def validate(self) -> None:
+        """Vérifie que le dossier source existe et est bien un dossier."""
         if not self.source_dir.exists():
             raise FileNotFoundError(
                 f"RAG_SOURCE_DIR pointe vers un dossier inexistant : {self.source_dir}"
@@ -54,42 +38,110 @@ class Settings:
             )
 
 
-def load_settings() -> Settings:
-    """
-    Fonction d'initialisation des variables d'environnement.
-    """
-    source_dir = os.getenv("RAG_SOURCE_DIR", "data/corpus")
-    db_dir = os.getenv("DATABASE_PATH", "./chroma_db")
-    dir_name = os.getenv("DIR_NAME", "Documentation_Electrodomus")
-    collection_name = os.getenv("COLLECTION_NAME", "rag_electrodomus")
-    max_tokens = os.getenv("MAX_TOKENS", "512")
-    min_tokens = os.getenv("MIN_TOKENS", "200")
-    embed_model = os.getenv("EMBED_MODEL", "BAAI/bge-m3")
-    ollama_model = os.getenv("OLLAMA_MODEL", "ministral-3:latest")
-    groq_model = os.getenv("GROQ_MODEL", "gpt-oss-20b")
-    groq_api_key = os.getenv("GROQ_API_KEY", None)
-    fastapi_key = os.getenv("API_KEY", None)
-    n_candidates = int(os.getenv("N_CANDIDATES", 100))
-    rrf_candidates = int(os.getenv("RRF_CANDIDATES", 20))
-    rerank_candidates = int(os.getenv("RERANK_CANDIDATES", 10))
-    cross_encode = env_bool(os.getenv("CROSS_ENCODE", False))
+@dataclass(frozen=True)
+class DatabaseSettings:
+    """Classe des paramètres de ChromaDB."""
+    db_dir: Path
+    collection_name: str
 
-    settings = Settings(
-        source_dir=Path(source_dir),
-        db_dir=Path(db_dir),
-        dir_name=dir_name,
-        collection_name=collection_name,
-        max_tokens=max_tokens,
-        min_tokens=min_tokens,
-        embed_model=embed_model,
-        ollama_model=ollama_model,
-        groq_model=groq_model,
-        groq_api_key=groq_api_key,
-        fastapi_key=fastapi_key,
-        n_candidates=n_candidates,
-        rrf_candidates=rrf_candidates,
-        rerank_candidates=rerank_candidates,
-        cross_encode=cross_encode
+
+@dataclass(frozen=True)
+class ChunkingSettings:
+    """Classe des paramètres de chunking/embedding."""
+    max_tokens: int
+    embed_model: str
+
+
+@dataclass(frozen=True)
+class SearchSettings:
+    """Classe des paramètres de recherche hybride."""
+    n_candidates: int
+    rrf_candidates: int
+    final_candidates: int
+    cross_encoding: bool
+
+    def validate(self) -> None:
+        """Vérifie que n_candidates >= rrf_candidates >= rerank_candidates >= 1."""
+        if not self.n_candidates >= self.rrf_candidates >= self.final_candidates >= 1:
+            raise ValueError(
+                "Il faut N_CANDIDATES >= RRF_CANDIDATES >= RERANK_CANDIDATES >= 1 "
+                f"(reçu : {self.n_candidates}, {self.rrf_candidates}, "
+                f"{self.final_candidates})"
+            )
+
+
+@dataclass(frozen=True)
+class LLMSettings:
+    """Classe des paramètres de LLM."""
+    ollama_model: str
+    groq_model: str
+    groq_api_key: str | None
+
+
+@dataclass(frozen=True)
+class ApiSettings:
+    """Sécurisation de l'API FastAPI."""
+    fastapi_key: str | None
+
+
+# --------------------------------------------------------------------------
+# Fonctions de chargement (une par groupe, mises en cache)
+# --------------------------------------------------------------------------
+
+@lru_cache(maxsize=1)
+def load_path_settings() -> PathSettings:
+    """Charge et valide les chemins du corpus."""
+    paths = PathSettings(
+        source_dir=Path(os.getenv("RAG_SOURCE_DIR", "data/corpus")),
+        dir_name=os.getenv("DIR_NAME", "Documentation_Electrodomus"),
     )
-    settings.validate_folder()
-    return settings
+    paths.validate()
+    return paths
+
+
+@lru_cache(maxsize=1)
+def load_database_settings() -> DatabaseSettings:
+    """Charge les paramètres de la base Chroma."""
+    return DatabaseSettings(
+        db_dir=Path(os.getenv("DATABASE_PATH", "./chroma_db")),
+        collection_name=os.getenv("COLLECTION_NAME", "rag_electrodomus"),
+    )
+
+
+@lru_cache(maxsize=1)
+def load_embedding_settings() -> ChunkingSettings:
+    """Charge les paramètres de chunking et d'embedding."""
+    chunking = ChunkingSettings(
+        max_tokens=int(os.getenv("MAX_TOKENS", "512")),
+        embed_model=os.getenv("EMBED_MODEL", "BAAI/bge-m3"),
+    )
+    return chunking
+
+
+@lru_cache(maxsize=1)
+def load_search_settings() -> SearchSettings:
+    """Charge les paramètres de recherche."""
+    search = SearchSettings(
+        n_candidates=int(os.getenv("N_CANDIDATES", "100")),
+        rrf_candidates=int(os.getenv("RRF_CANDIDATES", "20")),
+        final_candidates=int(os.getenv("FINAL_CANDIDATES", "10")),
+        cross_encoding=str_to_bool(os.getenv("CROSS_ENCODING", "False"))
+    )
+    search.validate()
+    return search
+
+
+@lru_cache(maxsize=1)
+def load_llm_settings() -> LLMSettings:
+    """Charge les paramètres des modèles de langage."""
+    return LLMSettings(
+        ollama_model=os.getenv("OLLAMA_MODEL", "ministral-3:latest"),
+        groq_model=os.getenv("GROQ_MODEL", "gpt-oss-20b"),
+        groq_api_key=os.getenv("GROQ_API_KEY"),
+    )
+
+
+@lru_cache(maxsize=1)
+def load_api_settings() -> ApiSettings:
+    """Charge les paramètres de l'API."""
+    return ApiSettings(fastapi_key=os.getenv("API_KEY"))

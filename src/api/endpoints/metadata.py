@@ -4,8 +4,8 @@ Routes des modifications des métadonnées des chunks.
 
 from fastapi import APIRouter, Depends
 
-from src.api.security import verify_api_key
 from src.api.schemas import MetadataRequest, MetadataFilteredRequest
+from src.api.security import verify_api_key
 from src.database.database_functions import add_metadata_to_all, add_metadata_by_title
 
 
@@ -27,4 +27,5 @@ def add_metadata_filtered(request: MetadataFilteredRequest):
                           filter_value=request.filter_value,
                           key=request.key,
                           value=request.value)
+
     return {"result": "OK"}

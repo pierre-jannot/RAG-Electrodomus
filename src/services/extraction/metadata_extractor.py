@@ -7,7 +7,7 @@ from pathlib import Path
 
 from docling_core.transforms.chunker import DocChunk
 
-from src.core.config import load_settings
+from src.core.config import load_path_settings
 from src.services.extraction.regex_extractor import (
     resolve_date, resolve_errors, resolve_models, resolve_chunk_errors,
     resolve_chunk_models, resolve_chunk_page
@@ -15,7 +15,7 @@ from src.services.extraction.regex_extractor import (
 from src.utils.files import compute_signature
 
 
-settings = load_settings()
+path_settings = load_path_settings()
 
 def clean_metadata(metadata: dict) -> dict:
     """
@@ -41,7 +41,7 @@ def resolve_metadata(text: str, path: list[str]) -> dict:
     date = resolve_date(text)
     models = resolve_models(text, path)
     errors = resolve_errors(text)
-    rel_path = Path(f"{settings.source_dir}/{settings.dir_name}/{'/'.join(path)}")
+    rel_path = Path(f"{path_settings.source_dir}/{path_settings.dir_name}/{'/'.join(path)}")
     signature = compute_signature(rel_path)
 
     return {

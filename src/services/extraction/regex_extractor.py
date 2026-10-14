@@ -39,9 +39,11 @@ YEAR_PATTERNS = [
 
 DATE_TIERS = [FULL_DATE_PATTERNS, MONTH_YEAR_PATTERNS, YEAR_PATTERNS]
 
-MODEL_PATTERN = re.compile(r"\b((?:FR|WX|LV)-\d{3,4})\b")
+SEP = r"[-‐‑–\s\u00a0\u202f]?"   # - ‐ ‑ – espace, espace insécable, fine insécable
 
-DEVICE_TYPE_PATTERN = re.compile(r"\b(FR|WX|LV)\b(?!-\d)")
+MODEL_PATTERN = re.compile(rf"\b((?:FR|WX|LV){SEP}\d{{3,4}})\b")
+
+DEVICE_TYPE_PATTERN = re.compile(rf"\b(FR|WX|LV)\b(?!-\d)")
 
 SECTION_PATTERN = re.compile(
     r"Mod[eè]les?\s+concern[ée]s?\s*:?\s*\n?(.*?)(?:\n\s*\n|\n#{1,6}\s|\Z)",
@@ -56,11 +58,10 @@ ERROR_CODE_PATTERN = re.compile(r"\bE\d{2}\b")
 def text_to_bare_device_type(text: str) -> str:
     """Remplace les occurences de noms d'électroménager
     par leur type."""
-    text = text.lower().replace('-', ' ')
-    text = text.replace('lave linge', 'WX')
-    text = text.replace('lave vaisselle', 'LV')
-    text = text.replace('four', 'FR')
-    text = text.replace('four encastrable', 'FR')
+    text = text.lower()
+    text = re.sub(r"\blave[\s-]linges?\b", "WX", text)
+    text = re.sub(r"\blave[\s-]vaisselles?\b", "LV", text)
+    text = re.sub(r"\bfours?(?:\s+encastrables?)?\b", "FR", text)
     return text
 
 
@@ -74,7 +75,7 @@ def extract_bare_device_types(text: str) -> list[str]:
     return sorted(set(DEVICE_TYPE_PATTERN.findall(text)))
 
 
-def resolve_models(text: str, path: list[str] = []) -> list[str] | None:
+def resolve_models(text: str, path: list[str] | None = None) -> list[str] | None:
     """
     Résout les modèles/types associés à un texte selon la priorité :
     1. Modèle(s) précis (XX-999) s'ils existent
@@ -106,7 +107,8 @@ def resolve_models(text: str, path: list[str] = []) -> list[str] | None:
 def resolve_chunk_models(
         chunk: DocChunk,
         text: str,
-        document_level_models: list[str] | None, path: list[str]
+        document_level_models: list[str] | None,
+        path: list[str] | None
         ) -> list[str] | None:
     """
     Applique la logique complète à l'échelle d'un chunk :
@@ -235,7 +237,7 @@ def build_element_clause(element_list: list[str], element_name: str) -> dict | N
     return None
 
 
-def resolve_query_where_clause(question: str, api_key: str) -> dict | None:
+def resolve_query_where_clause(question: str, api_key: str | None) -> dict | None:
     """Fonction de construction de la clause de filtrage de la query Chroma."""
     models = extract_specific_models(question)
     if not models:

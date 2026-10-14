@@ -16,8 +16,8 @@ from docling_core.types.doc import DoclingDocument, DocItemLabel, SectionHeaderI
 
 import pandas as pd
 
-from src.services.extraction.xlsx_extractor import read_sheet_fixed_template
 from src.services.extraction.html_extractor import promote_summary_to_heading
+from src.services.extraction.xlsx_extractor import read_sheet_fixed_template
 
 
 FIRST_LINE_NOISE_VALUES = {
