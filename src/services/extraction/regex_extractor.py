@@ -39,9 +39,11 @@ YEAR_PATTERNS = [
 
 DATE_TIERS = [FULL_DATE_PATTERNS, MONTH_YEAR_PATTERNS, YEAR_PATTERNS]
 
-MODEL_PATTERN = re.compile(r"\b((?:FR|WX|LV)-\d{3,4})\b")
+SEP = r"[-‐‑–\s\u00a0\u202f]?"   # - ‐ ‑ – espace, espace insécable, fine insécable
 
-DEVICE_TYPE_PATTERN = re.compile(r"\b(FR|WX|LV)\b(?!-\d)")
+MODEL_PATTERN = re.compile(rf"\b((?:FR|WX|LV){SEP}\d{{3,4}})\b")
+
+DEVICE_TYPE_PATTERN = re.compile(rf"\b(FR|WX|LV)\b(?!-\d)")
 
 SECTION_PATTERN = re.compile(
     r"Mod[eè]les?\s+concern[ée]s?\s*:?\s*\n?(.*?)(?:\n\s*\n|\n#{1,6}\s|\Z)",
@@ -56,11 +58,10 @@ ERROR_CODE_PATTERN = re.compile(r"\bE\d{2}\b")
 def text_to_bare_device_type(text: str) -> str:
     """Remplace les occurences de noms d'électroménager
     par leur type."""
-    text = text.lower().replace('-', ' ')
-    text = text.replace('lave linge', 'WX')
-    text = text.replace('lave vaisselle', 'LV')
-    text = text.replace('four', 'FR')
-    text = text.replace('four encastrable', 'FR')
+    text = text.lower()
+    text = re.sub(r"\blave[\s-]linges?\b", "WX", text)
+    text = re.sub(r"\blave[\s-]vaisselles?\b", "LV", text)
+    text = re.sub(r"\bfours?(?:\s+encastrables?)?\b", "FR", text)
     return text
 
 
