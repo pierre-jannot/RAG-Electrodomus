@@ -7,17 +7,18 @@ from functools import lru_cache
 from pathlib import Path
 
 from docling.chunking import HybridChunker
-from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
-from docling_core.transforms.chunker import DocChunk
 from docling.document_converter import DocumentConverter
+from docling_core.transforms.chunker import DocChunk
+from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
 from transformers import AutoTokenizer
 
-from src.core.config import load_settings
+from src.core.config import load_path_settings, load_embedding_settings
 from src.services.extraction.docling_converter import convert_file, get_converter
 from src.services.extraction.metadata_extractor import resolve_metadata, resolve_chunk_metadata
 from src.utils.files import list_files, get_path_after
 
-settings = load_settings()
+path_settings = load_path_settings()
+embedding_settings = load_embedding_settings()
 
 
 def build_tokenizer():
@@ -25,8 +26,8 @@ def build_tokenizer():
     Script de création du tokenizer.
     """
     tokenizer = HuggingFaceTokenizer(
-        tokenizer=AutoTokenizer.from_pretrained(settings.embed_model),
-        max_tokens=settings.max_tokens,
+        tokenizer=AutoTokenizer.from_pretrained(embedding_settings.embed_model),
+        max_tokens=embedding_settings.max_tokens,
     )
     return tokenizer
 
@@ -48,13 +49,17 @@ def get_chunker() -> HybridChunker:
     return build_chunker()
 
 
-def chunk_document(chunker: HybridChunker, converter: DocumentConverter, file: Path) -> list[DocChunk]:
+def chunk_document(
+        chunker: HybridChunker,
+        converter: DocumentConverter,
+        file: Path
+        ) -> list[DocChunk]:
     """
     Fonction de séparation du document
     en chunks.
     """
     document = convert_file(file, converter=converter)
-    path = get_path_after(file, settings.dir_name)
+    path = get_path_after(file, path_settings.dir_name)
     document_text = document.export_to_markdown()
     metadata = resolve_metadata(document_text, path)
     raw_chunks = list(chunker.chunk(dl_doc=document))
@@ -73,7 +78,7 @@ def chunk_document(chunker: HybridChunker, converter: DocumentConverter, file: P
     return chunks
 
 
-def chunk_directory(path: Path = settings.source_dir) -> list[DocChunk]:
+def chunk_directory(path: Path = path_settings.source_dir) -> list[DocChunk]:
     """
     Fonction de séparation de tous les documents
     du directory en chunks.

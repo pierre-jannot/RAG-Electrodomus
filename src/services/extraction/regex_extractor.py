@@ -74,7 +74,7 @@ def extract_bare_device_types(text: str) -> list[str]:
     return sorted(set(DEVICE_TYPE_PATTERN.findall(text)))
 
 
-def resolve_models(text: str, path: list[str] = []) -> list[str] | None:
+def resolve_models(text: str, path: list[str] | None = None) -> list[str] | None:
     """
     Résout les modèles/types associés à un texte selon la priorité :
     1. Modèle(s) précis (XX-999) s'ils existent
@@ -106,7 +106,8 @@ def resolve_models(text: str, path: list[str] = []) -> list[str] | None:
 def resolve_chunk_models(
         chunk: DocChunk,
         text: str,
-        document_level_models: list[str] | None, path: list[str]
+        document_level_models: list[str] | None,
+        path: list[str] | None
         ) -> list[str] | None:
     """
     Applique la logique complète à l'échelle d'un chunk :
@@ -235,7 +236,7 @@ def build_element_clause(element_list: list[str], element_name: str) -> dict | N
     return None
 
 
-def resolve_query_where_clause(question: str, api_key: str) -> dict | None:
+def resolve_query_where_clause(question: str, api_key: str | None) -> dict | None:
     """Fonction de construction de la clause de filtrage de la query Chroma."""
     models = extract_specific_models(question)
     if not models:

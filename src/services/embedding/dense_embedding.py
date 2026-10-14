@@ -12,9 +12,9 @@ from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.utils.embedding_functions import register_embedding_function
 from sentence_transformers import SentenceTransformer
 
-from src.core.config import load_settings
+from src.core.config import load_embedding_settings
 
-settings = load_settings()
+embedding_settings = load_embedding_settings()
 
 
 @lru_cache(maxsize=4)
@@ -30,7 +30,7 @@ class ChromaDenseEmbeddingFunction(EmbeddingFunction):
 
     def __init__(
         self,
-        model_name: str = settings.embed_model,
+        model_name: str = embedding_settings.embed_model,
         device: Optional[str] = None,
     ):
         self.model_name = model_name

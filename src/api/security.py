@@ -2,14 +2,13 @@
 Script des fonctions de sécurisation par clé API des routes FastAPI.
 """
 
-from src.core.config import load_settings
 from fastapi import Security, HTTPException, status
 from fastapi.security import APIKeyHeader
 
+from src.core.config import load_api_settings
 
-settings = load_settings()
 
-API_KEY = settings.fastapi_key
+api_settings = load_api_settings()
 
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
@@ -21,7 +20,7 @@ def verify_api_key(api_key: str | None = Security(api_key_header)) -> str:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Clé API manquante",
         )
-    if api_key != API_KEY:
+    if api_key != api_settings.fastapi_key:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Clé API invalide",
@@ -38,7 +37,7 @@ def verify_api_key_optional(api_key: str | None = Security(api_key_header)) -> s
     """
     if api_key is None:
         return None
-    if api_key != API_KEY:
+    if api_key != api_settings.fastapi_key:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Clé API invalide",

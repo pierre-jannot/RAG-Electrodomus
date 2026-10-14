@@ -4,14 +4,14 @@ Scripts des fonctions Python de création/mise à jour de la BDD.
 
 from pathlib import Path
 
-from src.core.config import load_settings
+from src.core.config import load_path_settings
 from src.database import database_functions as db
 from src.services.embedding.docling_chunker import get_chunker, chunk_document, chunk_directory
 from src.services.extraction.docling_converter import get_converter
 from src.utils.files import list_files, get_path_after, compute_signature
 
 
-settings = load_settings()
+path_settings = load_path_settings()
 
 
 def populate_database():
@@ -25,7 +25,7 @@ def populate_database():
 
 
 def synchronize_database(
-    root: Path = settings.source_dir,
+    root: Path = path_settings.source_dir,
 ) -> dict[str, int]:
     """Fonction de mise à jour de la base de données."""
     collection = db.get_dense_collection()
@@ -37,7 +37,7 @@ def synchronize_database(
     chunker = get_chunker()
 
     for file in list_files(root):
-        title = get_path_after(file, settings.dir_name)[-1]
+        title = get_path_after(file, path_settings.dir_name)[-1]
         seen_files.add(title)
         signature = compute_signature(file)
         known = indexed.get(title)

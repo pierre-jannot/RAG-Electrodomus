@@ -7,13 +7,16 @@ from time import time
 
 from src.client.groq_client import GroqClient
 from src.client.ollama_client import OllamaClient
+from src.core.config import load_api_settings
+from src.services.call.prompt_service import build_prompt
 from src.services.embedding.hybrid_search import hybrid_search
 from src.services.extraction.regex_extractor import resolve_query_where_clause
-from src.services.call.prompt_service import build_prompt
 from src.utils.dict import get_leaf_strings
 
 ollama_client = OllamaClient()
 groq_client = GroqClient()
+
+api_settings = load_api_settings()
 
 
 def read_benchmark_json(path: str) -> dict:
@@ -34,10 +37,10 @@ def run_benchmark_chunks(parameters: dict, question: str) -> dict:
     """Exécute une occurrence paramètres/question et retourne les
     chunks trouvés."""
     n_candidates = parameters["n_candidates"]
-    top_k = parameters["top_k"]
+    rrf_candidates = parameters["top_k"]
 
-    where_clause = resolve_query_where_clause(question)
-    chunks = hybrid_search(question, where_clause, n_candidates, top_k)
+    where_clause = resolve_query_where_clause(question, api_key=api_settings.fastapi_key)
+    chunks = hybrid_search(question, where_clause, n_candidates, rrf_candidates)
 
     result_dict = {}
 
@@ -58,15 +61,15 @@ def run_benchmark_llm(parameters: dict, question: str) -> dict:
 
     t0 = time()
 
-    where_clause = resolve_query_where_clause(question)
+    where_clause = resolve_query_where_clause(question, api_key=api_settings.fastapi_key)
     model_and_error = get_leaf_strings(where_clause)
     request = f"{' - '.join(model_and_error)} | {question}"
-    chunks = hybrid_search(request, where_clause=where_clause, top_k=5)
+    chunks = hybrid_search(request, where_clause=where_clause)
     prompt = build_prompt(request, chunks)
 
     if method == "groq":
         response = groq_client.ask(prompt, model=model)
-    elif method == "ollama":
+    else:
         response = ollama_client.ask(prompt, model=model)
 
     results = {"reponse": response, "duration": time()-t0}
@@ -109,19 +112,19 @@ def run_benchmark() -> None:
     result = {"chunks": [], "LLM": []}
 
     for benchmark in benchmarks:
-        type = benchmark["type"]
+        benchmark_type = benchmark["type"]
         queries = {}
-        if type == "chunks":
-            for id, query in enumerate(benchmark["queries"], start=1):
+        if benchmark_type == "chunks":
+            for index, query in enumerate(benchmark["queries"], start=1):
                 chunks_queries = run_chunk_benchmark_query(query)
-                queries[id] = {"results": chunks_queries}
+                queries[index] = {"results": chunks_queries}
 
-        if type == "LLM":
-            for id, query in enumerate(benchmark["queries"], start=1):
+        if benchmark_type == "LLM":
+            for index, query in enumerate(benchmark["queries"], start=1):
                 llm_queries = run_llm_benchmark_query(query)
-                queries[id] = {"results": llm_queries}
+                queries[index] = {"results": llm_queries}
 
-        result[type].append(queries)
+        result[benchmark_type].append(queries)
 
     write_benchmark_json("src/benchmark/results.json", result)
 

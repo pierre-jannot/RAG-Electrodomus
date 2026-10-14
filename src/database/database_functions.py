@@ -9,29 +9,28 @@ import uuid
 
 import chromadb
 
-from src.core.config import load_settings
+from src.core.config import load_database_settings
 from src.services.embedding.dense_embedding import ChromaDenseEmbeddingFunction
 
-settings = load_settings()
+db_settings = load_database_settings()
 
 
 @lru_cache(maxsize=1)
 def get_dense_collection(
-    persist_path: str = settings.db_dir,
-    collection_name: str = settings.collection_name,
+    persist_path: str = db_settings.db_dir,
+    collection_name: str = db_settings.collection_name,
 ) -> chromadb.Collection:
     """
     Fonction de création/récupération de la base de données.
     """
     client = chromadb.PersistentClient(path=persist_path)
-    try:
-        return client.get_collection(name=collection_name)
-    except Exception:
-        return client.create_collection(
-            name=collection_name,
-            embedding_function=ChromaDenseEmbeddingFunction(),
-            metadata={"hnsw:space": "cosine"},
-        )
+    collection =  client.get_or_create_collection(
+        name=collection_name,
+        embedding_function=ChromaDenseEmbeddingFunction(),
+        metadata={"hnsw:space": "cosine"},
+    )
+
+    return collection
 
 
 def get_indexed_signatures(collection, batch_size: int = 1000) -> dict[str, set[str]]:
@@ -107,7 +106,7 @@ def add_metadata_by_title(filter_key: str, filter_value, key: str, value, batch_
 
     ids = result["ids"]
     if not ids:
-        return 0
+        return
 
     metadatas = [dict(meta or {}) for meta in result["metadatas"]]
     for meta in metadatas:
@@ -140,7 +139,6 @@ def fetch_candidates(candidate_ids: list[str]) -> list[dict]:
         return []
 
     chroma_collection = get_dense_collection()
-
     data = chroma_collection.get(ids=candidate_ids, include=["documents", "metadatas"])
     id_to_doc = dict(zip(data["ids"], data["documents"]))
     id_to_meta = dict(zip(data["ids"], data["metadatas"]))
@@ -153,5 +151,5 @@ def fetch_candidates(candidate_ids: list[str]) -> list[dict]:
             "metadata": id_to_meta[doc_id],
         }
         for doc_id in candidate_ids
-        if doc_id in id_to_doc   # ignore un ID disparu entre-temps
+        if doc_id in id_to_doc
     ]

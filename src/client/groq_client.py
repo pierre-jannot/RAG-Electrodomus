@@ -14,10 +14,10 @@ from groq import (
     RateLimitError,
 )
 
-from src.core.config import load_settings
+from src.core.config import load_llm_settings
 
 logger = logging.getLogger(__name__)
-settings = load_settings()
+llm_settings = load_llm_settings()
 SYSTEM_PROMPT = Path("src/core/system_prompt.md").read_text(encoding="utf-8")
 
 
@@ -34,10 +34,10 @@ class GroqClient:
     """Classe du client Groq, avec ses fonctions utilitaires d'appel."""
 
     host: str = "http://localhost:11434"
-    default_model: str = settings.groq_model
+    default_model: str = llm_settings.groq_model
 
     def __post_init__(self) -> None:
-        self._client = Groq(api_key=settings.groq_api_key)
+        self._client = Groq(api_key=llm_settings.groq_api_key)
 
     def ask(
             self,

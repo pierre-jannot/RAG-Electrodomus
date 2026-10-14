@@ -4,8 +4,8 @@ Fichier Python des routes du "SAV".
 
 from fastapi import APIRouter, HTTPException, Depends
 
-from src.api.security import verify_api_key_optional
 from src.api.schemas import AnswerResponse, QuestionRequest, DetailedQuestionRequest
+from src.api.security import verify_api_key_optional
 from src.client.groq_client import GroqConfigError, GroqRequestError
 from src.services.call.ask_service import ask, ask_filtered
 from src.services.extraction.regex_extractor import split_sav_marker

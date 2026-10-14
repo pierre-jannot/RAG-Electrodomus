@@ -42,7 +42,7 @@ Se rendre sur **http://localhost:8000/docs**.
 
 ### 2b - Utiliser l'interface utilisateur
 
-Ouvrir la page **index.html** sur un navigateur.
+Ouvrir la page **index.html** sur un navigateur (src/fontend/).
 
 ## Exécuter Pylint
 
