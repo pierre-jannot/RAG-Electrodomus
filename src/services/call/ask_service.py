@@ -15,7 +15,7 @@ def ask(request: str, api_key: str | None) -> str:
     """Fonction pour question utilisateur sur le corpus Electrodomus."""
 
     where_clause = resolve_query_where_clause(request, api_key)
-
+    
     results = hybrid_search(request, where_clause=where_clause)
 
     prompt = build_prompt(request, results)

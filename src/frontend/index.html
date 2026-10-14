@@ -903,6 +903,8 @@
     }
   }
 
+  loadApplianceTypes();
+
   // Au chargement : si une clé est mémorisée, on la revalide automatiquement
   try { apiKeyInput.value = localStorage.getItem(KEY_STORAGE) || ""; } catch {}
   if (apiKeyInput.value) validateApiKey();
